@@ -8,7 +8,9 @@ import './styles/popup.css';
 
 interface BlockLogEntry {
   domain: string;
-  type: 'ad' | 'tracker';
+  type: 'ad' | 'tracker' | 'redirect' | 'phishing';
+  url?: string;
+  reason?: string;
   timestamp: number;
 }
 
@@ -57,6 +59,16 @@ function formatTime(ts: number): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
+function badgeLabel(type: string): string {
+  switch (type) {
+    case 'ad': return 'ad';
+    case 'tracker': return 'tracker';
+    case 'redirect': return 'redirect';
+    case 'phishing': return 'phishing';
+    default: return type;
+  }
+}
+
 function ActivityLog({ log }: { log: BlockLogEntry[] }) {
   const [open, setOpen] = useState(false);
 
@@ -72,10 +84,22 @@ function ActivityLog({ log }: { log: BlockLogEntry[] }) {
             <div class="log-empty">No blocked requests yet. Browse some websites!</div>
           ) : (
             log.slice(0, 50).map((entry, i) => (
-              <div class="activity-log-item" key={i}>
-                <span class={`log-badge ${entry.type}`}>{entry.type}</span>
-                <span class="log-domain" title={entry.domain}>{entry.domain}</span>
-                <span class="log-time">{formatTime(entry.timestamp)}</span>
+              <div class={`activity-log-item ${entry.type === 'redirect' || entry.type === 'phishing' ? 'log-highlight' : ''}`} key={i}>
+                <div class="log-row-main">
+                  <span class={`log-badge ${entry.type}`}>{badgeLabel(entry.type)}</span>
+                  <span class="log-domain" title={entry.url || entry.domain}>{entry.domain}</span>
+                  <span class="log-time">{formatTime(entry.timestamp)}</span>
+                </div>
+                {(entry.type === 'redirect' || entry.type === 'phishing') && (
+                  <div class="log-row-detail">
+                    {entry.reason && <span class="log-reason">{entry.reason}</span>}
+                    {entry.url && (
+                      <span class="log-url" title={entry.url}>
+                        {entry.url.length > 60 ? entry.url.slice(0, 60) + '…' : entry.url}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}

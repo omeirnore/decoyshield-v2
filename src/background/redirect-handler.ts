@@ -23,6 +23,7 @@
 
 import { getSettings, onSettingsChanged } from '@/shared/storage';
 import { recordStat } from './stats-collector';
+import { pushLogEntry } from './block-log';
 
 // ─── Cached settings (avoids async getSettings() in hot path) ──
 let redirectEnabled = true; // default on until settings load
@@ -101,8 +102,15 @@ function handleRedirectCheck(
     // Redirect the tab back to its original URL (async is fine HERE — decision already made)
     chrome.tabs.update(details.tabId, { url: currentUrl });
 
-    // Record as blocked ad (fire-and-forget)
+    // Record stat and log for activity feed
     recordStat({ type: 'adsBlocked', timestamp: Date.now() });
+    pushLogEntry({
+      domain: newHost,
+      type: 'redirect',
+      url: newUrl,
+      reason: `Redirected from ${currentHost}`,
+      timestamp: Date.now(),
+    });
   } catch {
     // URL parsing failed — allow the navigation
   }
@@ -162,7 +170,25 @@ export function registerRedirectHandler(): void {
     // Make sure the source tab stays focused
     chrome.tabs.update(details.sourceTabId, { active: true });
 
-    // Record as blocked
+    // Record stat and log for activity feed
     recordStat({ type: 'adsBlocked', timestamp: Date.now() });
+    try {
+      const popupHost = new URL(details.url).hostname;
+      pushLogEntry({
+        domain: popupHost || 'popup',
+        type: 'redirect',
+        url: details.url,
+        reason: `Popup opened by ${new URL(sourceUrl).hostname}`,
+        timestamp: Date.now(),
+      });
+    } catch {
+      pushLogEntry({
+        domain: 'popup',
+        type: 'redirect',
+        url: details.url,
+        reason: 'Popup tab blocked',
+        timestamp: Date.now(),
+      });
+    }
   });
 }

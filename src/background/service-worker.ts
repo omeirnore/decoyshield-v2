@@ -7,6 +7,7 @@ import { registerPhishingHandler, allowUrl } from './phishing-handler';
 import { registerRedirectHandler } from './redirect-handler';
 import { enableRuleset, disableRuleset, checkRuleCapacity } from './dnr-manager';
 import { recordStat, getStats } from './stats-collector';
+import { pushLogEntry, getBlockLog } from './block-log';
 import type { StatType } from '@/shared/types';
 
 async function initSessionSalt(): Promise<void> {
@@ -61,15 +62,6 @@ onSettingsChanged(() => { syncFingerprintState(); syncBlockingState(); });
 registerPhishingHandler();
 registerRedirectHandler();
 
-// --- Recent block log (kept in memory, lost on SW restart) ---
-interface BlockLogEntry {
-  domain: string;
-  type: 'ad' | 'tracker';
-  timestamp: number;
-}
-const blockLog: BlockLogEntry[] = [];
-const MAX_LOG = 200;
-
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'ALLOW_URL' && typeof message.payload === 'string') {
     allowUrl(message.payload);
@@ -82,7 +74,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     recordStat({ type: message.statType, timestamp: Date.now() });
   }
   if (message?.type === 'GET_BLOCK_LOG') {
-    sendResponse(blockLog);
+    sendResponse(getBlockLog());
     return false;
   }
 });
@@ -102,12 +94,12 @@ try {
       // Log the blocked domain for the activity feed
       try {
         const url = new URL(info.request.url);
-        blockLog.push({
+        pushLogEntry({
           domain: url.hostname,
           type: statType === 'adsBlocked' ? 'ad' : 'tracker',
+          url: info.request.url,
           timestamp: Date.now(),
         });
-        if (blockLog.length > MAX_LOG) blockLog.shift();
       } catch { /* ignore bad URLs */ }
     }
   });

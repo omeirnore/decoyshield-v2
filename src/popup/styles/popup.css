@@ -247,6 +247,41 @@ body {
   border-bottom: none;
 }
 
+.activity-log-item.log-highlight {
+  background: rgba(42, 58, 92, 0.3);
+  padding: 6px 12px;
+}
+
+.log-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.log-row-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+  padding-left: 4px;
+}
+
+.log-reason {
+  font-size: 10px;
+  color: var(--ds-text-muted);
+  font-style: italic;
+}
+
+.log-url {
+  font-size: 9px;
+  color: var(--ds-accent);
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
 .log-badge {
   font-size: 9px;
   font-weight: 600;
@@ -264,6 +299,16 @@ body {
 .log-badge.tracker {
   background: rgba(255, 165, 2, 0.2);
   color: var(--ds-warning);
+}
+
+.log-badge.redirect {
+  background: rgba(99, 110, 255, 0.2);
+  color: #636eff;
+}
+
+.log-badge.phishing {
+  background: rgba(255, 56, 56, 0.25);
+  color: #ff4444;
 }
 
 .log-domain {
