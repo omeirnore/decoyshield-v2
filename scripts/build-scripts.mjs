@@ -11,6 +11,7 @@ const entries = [
   { entry: 'src/content/isolated/config-bridge.ts', name: 'ConfigBridge', fileName: 'content/isolated/config-bridge.js' },
   { entry: 'src/content/main-world/fingerprint-injector.ts', name: 'FingerprintInjector', fileName: 'content/main-world/fingerprint-injector.js' },
   { entry: 'src/content/isolated/dom-inspector.ts', name: 'DomInspector', fileName: 'content/isolated/dom-inspector.js' },
+  { entry: 'src/content/main-world/redirect-blocker.ts', name: 'RedirectBlocker', fileName: 'content/main-world/redirect-blocker.js' },
 ];
 
 for (const { entry, name, fileName } of entries) {

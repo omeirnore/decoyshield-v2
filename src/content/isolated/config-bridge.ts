@@ -17,3 +17,11 @@ async function bridge() {
 }
 
 bridge();
+
+// Relay popup-blocked events from the main-world redirect blocker
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  if (event.data?.type === 'ds-popup-blocked') {
+    chrome.runtime.sendMessage({ type: 'RECORD_STAT', statType: 'adsBlocked' });
+  }
+});

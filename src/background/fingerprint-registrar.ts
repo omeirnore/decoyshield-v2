@@ -1,4 +1,4 @@
-const SCRIPT_IDS = ['ds-config-bridge', 'ds-fingerprint-injector'];
+const SCRIPT_IDS = ['ds-config-bridge', 'ds-fingerprint-injector', 'ds-redirect-blocker'];
 
 export async function registerFingerprintScripts(): Promise<void> {
   await unregisterFingerprintScripts();
@@ -16,6 +16,14 @@ export async function registerFingerprintScripts(): Promise<void> {
       id: 'ds-fingerprint-injector',
       matches: ['<all_urls>'],
       js: ['content/main-world/fingerprint-injector.js'],
+      runAt: 'document_start',
+      world: 'MAIN',
+      allFrames: true,
+    },
+    {
+      id: 'ds-redirect-blocker',
+      matches: ['<all_urls>'],
+      js: ['content/main-world/redirect-blocker.js'],
       runAt: 'document_start',
       world: 'MAIN',
       allFrames: true,
