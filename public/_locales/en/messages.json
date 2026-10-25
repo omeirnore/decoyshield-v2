@@ -6,5 +6,418 @@
   "extensionDescription": {
     "message": "Multipurpose cybersecurity extension for browser fingerprint protection, ad/tracker blocking, phishing detection, and cookie management.",
     "description": "Description of the extension"
+  },
+  "protectionActive": {
+    "message": "All protections active",
+    "description": "Shown when master and all modules are on"
+  },
+  "protectionPartial": {
+    "message": "Some modules disabled",
+    "description": "Shown when master is on but some modules are off"
+  },
+  "protectionOff": {
+    "message": "Protection disabled",
+    "description": "Shown when master toggle is off"
+  },
+  "fingerprintProtection": {
+    "message": "Fingerprint Protection",
+    "description": "Module name for fingerprint protection"
+  },
+  "adBlocking": {
+    "message": "Ad Blocking",
+    "description": "Module name for ad blocking"
+  },
+  "trackerBlocking": {
+    "message": "Tracker Blocking",
+    "description": "Module name for tracker blocking"
+  },
+  "phishingProtection": {
+    "message": "Phishing Protection",
+    "description": "Module name for phishing detection"
+  },
+  "protected": {
+    "message": "protected",
+    "description": "Stat label for fingerprint protections"
+  },
+  "blocked": {
+    "message": "blocked",
+    "description": "Stat label for blocked items"
+  },
+  "warnings": {
+    "message": "warnings",
+    "description": "Stat label for phishing warnings"
+  },
+  "totalBlocked": {
+    "message": "Blocked",
+    "description": "Stats bar label"
+  },
+  "fpProtected": {
+    "message": "FP Protected",
+    "description": "Stats bar fingerprint label"
+  },
+  "threats": {
+    "message": "Threats",
+    "description": "Stats bar threats label"
+  },
+  "openSettings": {
+    "message": "Open Settings",
+    "description": "Link to options page"
+  },
+  "settings": {
+    "message": "DecoyShield Settings",
+    "description": "Options page title"
+  },
+  "tabFingerprint": {
+    "message": "Fingerprint",
+    "description": "Options tab name"
+  },
+  "tabBlocking": {
+    "message": "Blocking",
+    "description": "Options tab name"
+  },
+  "tabPhishing": {
+    "message": "Phishing",
+    "description": "Options tab name"
+  },
+  "tabCookies": {
+    "message": "Cookies",
+    "description": "Options tab name"
+  },
+  "tabStatistics": {
+    "message": "Statistics",
+    "description": "Options tab name"
+  },
+  "tabThreatLog": {
+    "message": "Threat Log",
+    "description": "Options tab name"
+  },
+  "enableFingerprintProtection": {
+    "message": "Enable fingerprint protection",
+    "description": "Toggle label"
+  },
+  "fingerprintDesc": {
+    "message": "Applies to new page loads. Active profiles are per-site and session-based.",
+    "description": "Fingerprint setting description"
+  },
+  "techniqueToggles": {
+    "message": "Technique Toggles",
+    "description": "Section heading for individual techniques"
+  },
+  "webgl": {
+    "message": "WebGL",
+    "description": "Technique name"
+  },
+  "webglDesc": {
+    "message": "Spoofs GPU renderer and vendor strings",
+    "description": "WebGL technique description"
+  },
+  "navigator": {
+    "message": "Navigator",
+    "description": "Technique name"
+  },
+  "navigatorDesc": {
+    "message": "Randomizes hardware info, platform, and languages",
+    "description": "Navigator technique description"
+  },
+  "screen": {
+    "message": "Screen",
+    "description": "Technique name"
+  },
+  "screenDesc": {
+    "message": "Alters reported screen dimensions and color depth",
+    "description": "Screen technique description"
+  },
+  "audioContext": {
+    "message": "AudioContext",
+    "description": "Technique name"
+  },
+  "audioContextDesc": {
+    "message": "Adds micro-noise to audio processing output",
+    "description": "AudioContext technique description"
+  },
+  "canvas": {
+    "message": "Canvas",
+    "description": "Technique name"
+  },
+  "canvasDesc": {
+    "message": "Applies deterministic noise to canvas pixel data",
+    "description": "Canvas technique description"
+  },
+  "clientRects": {
+    "message": "Client Rects",
+    "description": "Technique name"
+  },
+  "clientRectsDesc": {
+    "message": "Offsets element bounding rectangles by sub-pixel amounts",
+    "description": "ClientRects technique description"
+  },
+  "adTrackerBlocking": {
+    "message": "Ad & Tracker Blocking",
+    "description": "Section heading"
+  },
+  "dnrDescription": {
+    "message": "Uses Chrome's declarativeNetRequest API with pre-converted filter lists. Rules are applied at the network level before requests are sent.",
+    "description": "DNR blocking description"
+  },
+  "ads": {
+    "message": "Ads",
+    "description": "Ruleset name"
+  },
+  "adsDesc": {
+    "message": "Blocks ad network requests (Source: EasyList)",
+    "description": "Ads ruleset description"
+  },
+  "trackers": {
+    "message": "Trackers",
+    "description": "Ruleset name"
+  },
+  "trackersDesc": {
+    "message": "Blocks tracking scripts and pixels (Source: EasyPrivacy)",
+    "description": "Trackers ruleset description"
+  },
+  "supplementary": {
+    "message": "Supplementary",
+    "description": "Ruleset name"
+  },
+  "supplementaryDesc": {
+    "message": "Blocks known ad/tracking domains (Source: Peter Lowe's List)",
+    "description": "Supplementary ruleset description"
+  },
+  "attribution": {
+    "message": "Attribution",
+    "description": "Section heading for filter list credits"
+  },
+  "attributionText": {
+    "message": "Filter lists provided by: EasyList (GPLv3), EasyPrivacy (GPLv3), Peter Lowe's Ad and tracking server list (Creative Commons).",
+    "description": "Filter list attribution"
+  },
+  "enablePhishing": {
+    "message": "Enable phishing detection",
+    "description": "Toggle label"
+  },
+  "phishingDesc": {
+    "message": "Analyzes URLs for phishing indicators using local heuristics.",
+    "description": "Phishing detection description"
+  },
+  "safeBrowsing": {
+    "message": "Google Safe Browsing",
+    "description": "Section heading"
+  },
+  "enableSafeBrowsing": {
+    "message": "Enable Safe Browsing lookup",
+    "description": "Toggle label"
+  },
+  "safeBrowsingDesc": {
+    "message": "Opt-in: partial URL hashes may be sent to Google's Safe Browsing service. Full URLs are never transmitted.",
+    "description": "Safe Browsing privacy disclosure"
+  },
+  "apiKey": {
+    "message": "API Key",
+    "description": "Label for API key input"
+  },
+  "apiKeyDesc": {
+    "message": "Required for Safe Browsing lookups. Get a key from Google Cloud Console.",
+    "description": "API key description"
+  },
+  "apiKeyPlaceholder": {
+    "message": "Enter Safe Browsing API key",
+    "description": "Input placeholder"
+  },
+  "riskThreshold": {
+    "message": "Risk Threshold",
+    "description": "Section heading"
+  },
+  "blockPagesAbove": {
+    "message": "Block pages at or above",
+    "description": "Risk threshold label"
+  },
+  "riskThresholdDesc": {
+    "message": "Low: most aggressive. Medium: balanced. High: only clear threats.",
+    "description": "Risk threshold description"
+  },
+  "riskLow": {
+    "message": "Low",
+    "description": "Risk level option"
+  },
+  "riskMedium": {
+    "message": "Medium",
+    "description": "Risk level option"
+  },
+  "riskHigh": {
+    "message": "High",
+    "description": "Risk level option"
+  },
+  "phishingCaveat": {
+    "message": "No detection system is perfect. DecoyShield may not catch all threats.",
+    "description": "Phishing detection caveat"
+  },
+  "cookieManager": {
+    "message": "Cookie Manager",
+    "description": "Section heading"
+  },
+  "domainPlaceholder": {
+    "message": "Enter domain (e.g. example.com)",
+    "description": "Cookie search placeholder"
+  },
+  "load": {
+    "message": "Load",
+    "description": "Button label"
+  },
+  "currentTab": {
+    "message": "Current Tab",
+    "description": "Button to fill current tab domain"
+  },
+  "cookiesFound": {
+    "message": "$COUNT$ cookie(s) found",
+    "description": "Cookie count",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "deleteAll": {
+    "message": "Delete All",
+    "description": "Delete all cookies button"
+  },
+  "delete": {
+    "message": "Delete",
+    "description": "Delete button"
+  },
+  "cancel": {
+    "message": "Cancel",
+    "description": "Cancel button"
+  },
+  "name": {
+    "message": "Name",
+    "description": "Table header"
+  },
+  "domain": {
+    "message": "Domain",
+    "description": "Table header"
+  },
+  "expires": {
+    "message": "Expires",
+    "description": "Table header"
+  },
+  "flags": {
+    "message": "Flags",
+    "description": "Table header"
+  },
+  "session": {
+    "message": "Session",
+    "description": "Cookie expiry type"
+  },
+  "unknown": {
+    "message": "Unknown",
+    "description": "Unknown expiry"
+  },
+  "secure": {
+    "message": "Secure",
+    "description": "Cookie flag badge"
+  },
+  "httpOnly": {
+    "message": "HttpOnly",
+    "description": "Cookie flag badge"
+  },
+  "deleteConfirm": {
+    "message": "Deleting cookies may sign you out of this site.",
+    "description": "Cookie delete confirmation warning"
+  },
+  "noCookies": {
+    "message": "No cookies found for this domain.",
+    "description": "Empty state"
+  },
+  "statistics": {
+    "message": "Statistics",
+    "description": "Section heading"
+  },
+  "day": {
+    "message": "Day",
+    "description": "Time range"
+  },
+  "week": {
+    "message": "Week",
+    "description": "Time range"
+  },
+  "month": {
+    "message": "Month",
+    "description": "Time range"
+  },
+  "adsBlocked": {
+    "message": "Ads Blocked",
+    "description": "Stat metric label"
+  },
+  "trackersBlocked": {
+    "message": "Trackers Blocked",
+    "description": "Stat metric label"
+  },
+  "fpProtections": {
+    "message": "FP Protections",
+    "description": "Stat metric label"
+  },
+  "phishingWarnings": {
+    "message": "Phishing Warnings",
+    "description": "Stat metric label"
+  },
+  "cookiesDeleted": {
+    "message": "Cookies Deleted",
+    "description": "Stat metric label"
+  },
+  "clearAllStats": {
+    "message": "Clear All Statistics",
+    "description": "Button label"
+  },
+  "clearStatsConfirm": {
+    "message": "Clear all statistics? This cannot be undone.",
+    "description": "Clear stats confirmation"
+  },
+  "threatLog": {
+    "message": "Threat Log",
+    "description": "Section heading"
+  },
+  "clearLog": {
+    "message": "Clear Log",
+    "description": "Button label"
+  },
+  "clearLogConfirm": {
+    "message": "Clear the threat log? This cannot be undone.",
+    "description": "Clear log confirmation"
+  },
+  "time": {
+    "message": "Time",
+    "description": "Table header"
+  },
+  "url": {
+    "message": "URL",
+    "description": "Table header"
+  },
+  "risk": {
+    "message": "Risk",
+    "description": "Table header"
+  },
+  "action": {
+    "message": "Action",
+    "description": "Table header"
+  },
+  "reason": {
+    "message": "Reason",
+    "description": "Table header"
+  },
+  "noThreats": {
+    "message": "No threats detected yet.",
+    "description": "Empty threat log"
+  },
+  "threatLogPrivacy": {
+    "message": "This log is stored locally and never transmitted.",
+    "description": "Privacy note on threat log"
+  },
+  "warningTitle": {
+    "message": "Warning: Suspicious Site Detected",
+    "description": "Warning page title"
+  },
+  "warningBack": {
+    "message": "Go back to safety",
+    "description": "Warning page safe button"
+  },
+  "warningProceed": {
+    "message": "Proceed anyway (not recommended)",
+    "description": "Warning page proceed link"
   }
 }
