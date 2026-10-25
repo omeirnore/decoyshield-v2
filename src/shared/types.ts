@@ -67,6 +67,7 @@ export type StatType =
   | 'trackersBlocked'
   | 'fingerprintProtections'
   | 'phishingWarnings'
+  | 'redirectsBlocked'
   | 'cookiesDeleted';
 
 export interface StatsEvent {
@@ -79,6 +80,7 @@ export interface DailyStats {
   trackersBlocked: number;
   fingerprintProtections: number;
   phishingWarnings: number;
+  redirectsBlocked: number;
   cookiesDeleted: number;
 }
 
