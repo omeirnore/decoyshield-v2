@@ -15,19 +15,17 @@
 (function DecoyShieldRedirectBlocker() {
   'use strict';
 
-  let enabled = false;
+  // Start enabled by default — disable only when config says off.
+  // This avoids a race where site scripts fire before the config arrives.
+  let enabled = true;
   const currentHost = location.hostname;
 
-  // Wait for config from the isolated-world config-bridge
+  // Listen for config from the isolated-world config-bridge
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
     if (event.data?.type === 'ds-redirect-config') {
       enabled = event.data.enabled;
-      if (enabled) {
-        console.log('[DecoyShield] Redirect Blocker: ON');
-      } else {
-        console.log('[DecoyShield] Redirect Blocker: OFF');
-      }
+      console.log(`[DecoyShield] Redirect Blocker: ${enabled ? 'ON' : 'OFF'}`);
     }
   });
 
