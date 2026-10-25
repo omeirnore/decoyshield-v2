@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "DecoyShield",
+    "description": "Name of the extension"
+  },
+  "extensionDescription": {
+    "message": "Multipurpose cybersecurity extension for browser fingerprint protection, ad/tracker blocking, phishing detection, and cookie management.",
+    "description": "Description of the extension"
+  }
+}

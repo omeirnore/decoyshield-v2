@@ -1,0 +1,26 @@
+{
+  "name": "decoyshield",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && vite build --config vite.config.scripts.ts",
+    "build:ui": "vite build",
+    "build:scripts": "vite build --config vite.config.scripts.ts",
+    "dev": "vite build --watch",
+    "test": "vitest",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "preact": "^10.25.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^26.6.5",
+    "jsdom": "^25.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "vitest": "^2.1.0"
+  }
+}
