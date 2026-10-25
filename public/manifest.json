@@ -8,6 +8,7 @@
     "storage",
     "scripting",
     "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
     "webNavigation",
     "cookies",
     "tabs"
