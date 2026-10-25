@@ -1,0 +1,7 @@
+[
+  {"id":100001,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||google-analytics.com^","resourceTypes":["script","image","xmlhttprequest"]}},
+  {"id":100002,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||connect.facebook.net^","resourceTypes":["script","image","xmlhttprequest"]}},
+  {"id":100003,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||bat.bing.com^","resourceTypes":["script","image","xmlhttprequest"]}},
+  {"id":100004,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||analytics.tiktok.com^","resourceTypes":["script","image","xmlhttprequest"]}},
+  {"id":100005,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||hotjar.com^","resourceTypes":["script","image","xmlhttprequest"]}}
+]

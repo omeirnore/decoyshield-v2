@@ -8,6 +8,7 @@
     "build:ui": "vite build",
     "build:scripts": "node scripts/build-scripts.mjs",
     "dev": "vite build --watch",
+    "convert-filters": "node scripts/convert-filters.mjs",
     "test": "vitest",
     "test:run": "vitest run"
   },

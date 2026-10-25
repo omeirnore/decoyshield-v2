@@ -6,8 +6,16 @@
   "default_locale": "en",
   "permissions": [
     "storage",
-    "scripting"
+    "scripting",
+    "declarativeNetRequest"
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      { "id": "ads", "enabled": true, "path": "rules/ads.json" },
+      { "id": "trackers", "enabled": true, "path": "rules/trackers.json" },
+      { "id": "supplementary", "enabled": true, "path": "rules/supplementary.json" }
+    ]
+  },
   "action": {
     "default_popup": "popup/index.html",
     "default_title": "DecoyShield"

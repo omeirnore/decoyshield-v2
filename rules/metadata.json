@@ -1,0 +1,5 @@
+[
+  {"id":"ads","name":"EasyList","sourceUrl":"https://easylist.to/easylist/easylist.txt","ruleCount":5,"convertedAt":"2026-10-25T00:00:00.000Z"},
+  {"id":"trackers","name":"EasyPrivacy","sourceUrl":"https://easylist.to/easylist/easyprivacy.txt","ruleCount":5,"convertedAt":"2026-10-25T00:00:00.000Z"},
+  {"id":"supplementary","name":"Peter Lowe's","sourceUrl":"https://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext","ruleCount":2,"convertedAt":"2026-10-25T00:00:00.000Z"}
+]

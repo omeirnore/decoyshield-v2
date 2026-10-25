@@ -1,6 +1,7 @@
 import { build } from 'vite';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { cpSync, existsSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -28,4 +29,9 @@ for (const { entry, name, fileName } of entries) {
       },
     },
   });
+}
+
+const rulesDir = resolve(root, 'rules');
+if (existsSync(rulesDir)) {
+  cpSync(rulesDir, resolve(root, 'dist', 'rules'), { recursive: true });
 }

@@ -1,0 +1,4 @@
+[
+  {"id":200001,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||tracking.example.com^","resourceTypes":["script","image","xmlhttprequest"]}},
+  {"id":200002,"priority":1,"action":{"type":"block"},"condition":{"urlFilter":"||ads.example.net^","resourceTypes":["script","image","xmlhttprequest"]}}
+]
