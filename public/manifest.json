@@ -5,7 +5,8 @@
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
   "permissions": [
-    "storage"
+    "storage",
+    "scripting"
   ],
   "action": {
     "default_popup": "popup/index.html",
@@ -15,5 +16,11 @@
   "background": {
     "service_worker": "service-worker.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["content/main-world/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "icons": {}
 }

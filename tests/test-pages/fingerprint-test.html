@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DecoyShield Fingerprint Test</title>
+  <style>
+    body { font-family: monospace; background: #1a1a2e; color: #e0e0e0; padding: 20px; }
+    h1 { color: #00d2ff; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+    th { background: #16213e; color: #00d2ff; }
+    .pass { color: #00ff88; }
+    .fail { color: #ff4444; }
+  </style>
+</head>
+<body>
+  <h1>DecoyShield Fingerprint Protection Test</h1>
+  <p>Load this page with the extension installed to verify fingerprint spoofing.</p>
+  <table id="results">
+    <tr><th>API</th><th>Value</th></tr>
+  </table>
+  <canvas id="test-canvas" width="200" height="50" style="display:none"></canvas>
+
+  <script>
+    const table = document.getElementById('results');
+    function row(api, value) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${api}</td><td>${String(value)}</td>`;
+      table.appendChild(tr);
+    }
+
+    row('navigator.hardwareConcurrency', navigator.hardwareConcurrency);
+    row('navigator.deviceMemory', navigator.deviceMemory);
+    row('navigator.platform', navigator.platform);
+    row('navigator.language', navigator.language);
+    row('navigator.languages', JSON.stringify(navigator.languages));
+    row('screen.width', screen.width);
+    row('screen.height', screen.height);
+    row('screen.colorDepth', screen.colorDepth);
+    row('screen.pixelDepth', screen.pixelDepth);
+
+    // Canvas fingerprint
+    const canvas = document.getElementById('test-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f60';
+    ctx.fillRect(0, 0, 200, 50);
+    ctx.fillStyle = '#069';
+    ctx.font = '14px Arial';
+    ctx.fillText('fingerprint test', 2, 30);
+    row('canvas.toDataURL() (first 80 chars)', canvas.toDataURL().substring(0, 80) + '...');
+
+    // WebGL fingerprint
+    const gl = document.createElement('canvas').getContext('webgl');
+    if (gl) {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      if (ext) {
+        row('WebGL RENDERER', gl.getParameter(ext.UNMASKED_RENDERER_WEBGL));
+        row('WebGL VENDOR', gl.getParameter(ext.UNMASKED_VENDOR_WEBGL));
+      } else {
+        row('WebGL debug_renderer_info', 'extension not available');
+      }
+    } else {
+      row('WebGL', 'not available');
+    }
+
+    // ClientRects
+    const div = document.createElement('div');
+    div.textContent = 'test';
+    div.style.cssText = 'position:absolute;top:100px;left:100px;width:200px;height:50px;';
+    document.body.appendChild(div);
+    const rect = div.getBoundingClientRect();
+    row('getBoundingClientRect().x', rect.x);
+    row('getBoundingClientRect().y', rect.y);
+    row('getBoundingClientRect().width', rect.width);
+    row('getBoundingClientRect().height', rect.height);
+  </script>
+</body>
+</html>
