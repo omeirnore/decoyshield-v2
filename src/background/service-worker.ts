@@ -3,6 +3,7 @@ import {
   registerFingerprintScripts,
   unregisterFingerprintScripts,
 } from './fingerprint-registrar';
+import { registerPhishingHandler, allowUrl } from './phishing-handler';
 
 async function initSessionSalt(): Promise<void> {
   await chrome.storage.session.setAccessLevel({
@@ -31,5 +32,13 @@ chrome.runtime.onInstalled.addListener(() => { onStartup(); });
 chrome.runtime.onStartup.addListener(() => { onStartup(); });
 
 onSettingsChanged(() => { syncFingerprintState(); });
+
+registerPhishingHandler();
+
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === 'ALLOW_URL' && typeof message.payload === 'string') {
+    allowUrl(message.payload);
+  }
+});
 
 console.log('DecoyShield service worker started');

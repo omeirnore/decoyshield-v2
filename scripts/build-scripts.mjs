@@ -10,6 +10,7 @@ const entries = [
   { entry: 'src/background/service-worker.ts', name: 'ServiceWorker', fileName: 'service-worker.js' },
   { entry: 'src/content/isolated/config-bridge.ts', name: 'ConfigBridge', fileName: 'content/isolated/config-bridge.js' },
   { entry: 'src/content/main-world/fingerprint-injector.ts', name: 'FingerprintInjector', fileName: 'content/main-world/fingerprint-injector.js' },
+  { entry: 'src/content/isolated/dom-inspector.ts', name: 'DomInspector', fileName: 'content/isolated/dom-inspector.js' },
 ];
 
 for (const { entry, name, fileName } of entries) {
