@@ -4,6 +4,7 @@ import {
   unregisterFingerprintScripts,
 } from './fingerprint-registrar';
 import { registerPhishingHandler, allowUrl } from './phishing-handler';
+import { registerRedirectHandler } from './redirect-handler';
 import { enableRuleset, disableRuleset, checkRuleCapacity } from './dnr-manager';
 import { recordStat, getStats } from './stats-collector';
 import type { StatType } from '@/shared/types';
@@ -58,6 +59,7 @@ chrome.runtime.onStartup.addListener(() => { onStartup(); });
 onSettingsChanged(() => { syncFingerprintState(); syncBlockingState(); });
 
 registerPhishingHandler();
+registerRedirectHandler();
 
 // --- Recent block log (kept in memory, lost on SW restart) ---
 interface BlockLogEntry {
