@@ -12,10 +12,25 @@
  *    different domain, redirect the tab back to its original URL
  * 3. This catches popunder/redirect ads that streaming sites trigger
  *    when you click the play button
+ *
+ * IMPORTANT: The handler is kept synchronous up to the blocking
+ * decision. An earlier version used `await getSettings()` which
+ * introduced a race condition — during the async pause,
+ * chrome.tabs.onUpdated would overwrite tabUrls with the redirect
+ * URL, making the handler think it was a same-domain navigation.
+ * Now settings are cached in memory and updated via storage listener.
  */
 
-import { getSettings } from '@/shared/storage';
+import { getSettings, onSettingsChanged } from '@/shared/storage';
 import { recordStat } from './stats-collector';
+
+// ─── Cached settings (avoids async getSettings() in hot path) ──
+let redirectEnabled = true; // default on until settings load
+
+async function loadSettings(): Promise<void> {
+  const settings = await getSettings();
+  redirectEnabled = settings.masterEnabled && settings.redirectBlock.enabled;
+}
 
 // ─── Tab URL tracking ──────────────────────────────────────────
 const tabUrls = new Map<number, string>();
@@ -34,17 +49,15 @@ function isInternalUrl(url: string): boolean {
 function getRootDomain(hostname: string): string {
   const parts = hostname.split('.');
   if (parts.length <= 2) return hostname;
-  // Simple heuristic: take last 2 parts.
-  // For co.uk style TLDs this isn't perfect, but good enough for our use case.
   return parts.slice(-2).join('.');
 }
 
 // Set of tabIds currently being redirected back (prevent infinite loops)
 const redirectingTabs = new Set<number>();
 
-async function handleRedirectCheck(
+function handleRedirectCheck(
   details: chrome.webNavigation.WebNavigationParentedCallbackDetails,
-): Promise<void> {
+): void {
   // Only check main frame navigations
   if (details.frameId !== 0) return;
 
@@ -57,9 +70,12 @@ async function handleRedirectCheck(
     return;
   }
 
-  const settings = await getSettings();
-  if (!settings.masterEnabled || !settings.redirectBlock.enabled) return;
+  // ── All checks below are SYNCHRONOUS — no race window ──
 
+  // Check cached settings (updated via storage listener, no await)
+  if (!redirectEnabled) return;
+
+  // Capture the tab's current URL SYNCHRONOUSLY before anything can change it
   const currentUrl = tabUrls.get(details.tabId);
   // No tracked URL means this is a fresh navigation (new tab, typed URL) — allow it
   if (!currentUrl || isInternalUrl(currentUrl)) return;
@@ -82,17 +98,23 @@ async function handleRedirectCheck(
     // Mark tab as "redirecting back" to prevent our own redirect from being blocked
     redirectingTabs.add(details.tabId);
 
-    // Redirect the tab back to its original URL
-    await chrome.tabs.update(details.tabId, { url: currentUrl });
+    // Redirect the tab back to its original URL (async is fine HERE — decision already made)
+    chrome.tabs.update(details.tabId, { url: currentUrl });
 
-    // Record as blocked ad
-    await recordStat({ type: 'adsBlocked', timestamp: Date.now() });
+    // Record as blocked ad (fire-and-forget)
+    recordStat({ type: 'adsBlocked', timestamp: Date.now() });
   } catch {
     // URL parsing failed — allow the navigation
   }
 }
 
 export function registerRedirectHandler(): void {
+  // Load initial settings
+  loadSettings();
+
+  // Keep cached settings in sync — fires whenever user toggles
+  onSettingsChanged(() => { loadSettings(); });
+
   // Track tab URLs so we know where each tab "is"
   chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.url && !isInternalUrl(changeInfo.url)) {
@@ -115,6 +137,7 @@ export function registerRedirectHandler(): void {
   });
 
   // The key listener — same API the phishing handler uses
+  // Handler is SYNCHRONOUS — no async gaps where tabUrls can be overwritten
   chrome.webNavigation.onBeforeNavigate.addListener((details) => {
     handleRedirectCheck(details);
   });
