@@ -41,7 +41,9 @@
     return null;
   };
 
-  // ─── 2. Block all clicks on <a target="_blank"> to external sites ──
+  // ─── 2. Block ALL clicks on <a> links to external domains ──────
+  // Streaming sites use both target="_blank" AND regular links
+  // positioned over the video player to redirect users.
   document.addEventListener('click', function (e: MouseEvent) {
     if (!enabled) return;
     // Walk up from the click target to find any <a> element
@@ -49,19 +51,19 @@
     while (el && el !== document.documentElement) {
       if (el.tagName === 'A') {
         const anchor = el as HTMLAnchorElement;
-        // Block external links that open in new tabs
-        if (anchor.target === '_blank' || anchor.target === '_new') {
-          try {
-            const linkHost = new URL(anchor.href, location.href).hostname;
-            if (linkHost !== currentHost) {
-              console.log(`[DecoyShield] Blocked external redirect: ${anchor.href}`);
-              e.preventDefault();
-              e.stopImmediatePropagation();
-              window.postMessage({ type: 'ds-popup-blocked', url: anchor.href }, '*');
-              return;
-            }
-          } catch { /* invalid URL, let it pass */ }
-        }
+        if (!anchor.href || anchor.href === '#' || anchor.href.startsWith('javascript:')) break;
+        try {
+          const linkUrl = new URL(anchor.href, location.href);
+          const linkHost = linkUrl.hostname;
+          // Block ANY link to a different domain
+          if (linkHost !== currentHost) {
+            console.log(`[DecoyShield] Blocked external redirect: ${anchor.href}`);
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            window.postMessage({ type: 'ds-popup-blocked', url: anchor.href }, '*');
+            return;
+          }
+        } catch { /* invalid URL, let it pass */ }
       }
       el = el.parentElement;
     }
@@ -92,7 +94,7 @@
 
   // ─── 4. Remove overlay <a> tags ───────────────────────────────
   function removeOverlayLinks() {
-    const links = document.querySelectorAll('a[target="_blank"], a[target="_new"]');
+    const links = document.querySelectorAll('a[href]');
     for (const link of links) {
       const el = link as HTMLAnchorElement;
       if (!el.href || el.href === '#') continue;
@@ -134,10 +136,10 @@
     for (const node of nodes) {
       if (!(node instanceof HTMLElement)) continue;
 
-      // Kill any new <a target="_blank"> to external domains
+      // Kill any new <a> to external domains
       if (node.tagName === 'A') {
         const anchor = node as HTMLAnchorElement;
-        if (anchor.target === '_blank' || anchor.target === '_new') {
+        if (anchor.href && anchor.href !== '#') {
           try {
             const linkHost = new URL(anchor.href, location.href).hostname;
             if (linkHost !== currentHost) {
@@ -168,7 +170,7 @@
       }
 
       // Also check children of added elements
-      const externalLinks = node.querySelectorAll?.('a[target="_blank"], a[target="_new"]');
+      const externalLinks = node.querySelectorAll?.('a[href]');
       if (externalLinks) {
         for (const link of externalLinks) {
           const anchor = link as HTMLAnchorElement;
