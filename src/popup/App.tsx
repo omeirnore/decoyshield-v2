@@ -171,6 +171,7 @@ export function App() {
 
       <StatsBar
         blocked={stats.ads + stats.trackers}
+        redirects={stats.redirects}
         fingerprints={stats.fingerprints}
         phishing={stats.phishing}
       />
