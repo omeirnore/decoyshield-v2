@@ -15,7 +15,7 @@ export function allowUrl(url: string): void {
 }
 
 export async function handleNavigation(
-  details: chrome.webNavigation.WebNavigationTransitionCallbackDetails,
+  details: { tabId: number; url: string; frameId: number },
 ): Promise<void> {
   if (details.frameId !== 0) return;
 
@@ -78,7 +78,9 @@ export async function handleNavigation(
 }
 
 export function registerPhishingHandler(): void {
-  chrome.webNavigation.onCommitted.addListener((details) => {
+  // Use onBeforeNavigate so we catch URLs BEFORE DNS resolution
+  // This way even non-existent phishing domains get intercepted
+  chrome.webNavigation.onBeforeNavigate.addListener((details) => {
     handleNavigation(details);
   });
 }
