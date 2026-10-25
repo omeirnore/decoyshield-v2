@@ -4,6 +4,7 @@ import {
   unregisterFingerprintScripts,
 } from './fingerprint-registrar';
 import { registerPhishingHandler, allowUrl } from './phishing-handler';
+import { enableRuleset, disableRuleset, checkRuleCapacity } from './dnr-manager';
 
 async function initSessionSalt(): Promise<void> {
   await chrome.storage.session.setAccessLevel({
@@ -23,15 +24,36 @@ async function syncFingerprintState(): Promise<void> {
   }
 }
 
+async function syncBlockingState(): Promise<void> {
+  const settings = await getSettings();
+  const rulesetMap = {
+    ads: settings.blocking.adsEnabled,
+    trackers: settings.blocking.trackersEnabled,
+    supplementary: settings.blocking.supplementaryEnabled,
+  } as const;
+  for (const [id, enabled] of Object.entries(rulesetMap)) {
+    if (enabled) {
+      await enableRuleset(id as 'ads' | 'trackers' | 'supplementary');
+    } else {
+      await disableRuleset(id);
+    }
+  }
+}
+
 async function onStartup(): Promise<void> {
   await initSessionSalt();
   await syncFingerprintState();
+  await syncBlockingState();
+  const capacity = await checkRuleCapacity();
+  if (capacity.warning) {
+    console.warn(`DecoyShield: Low DNR rule capacity (${capacity.available} remaining)`);
+  }
 }
 
 chrome.runtime.onInstalled.addListener(() => { onStartup(); });
 chrome.runtime.onStartup.addListener(() => { onStartup(); });
 
-onSettingsChanged(() => { syncFingerprintState(); });
+onSettingsChanged(() => { syncFingerprintState(); syncBlockingState(); });
 
 registerPhishingHandler();
 

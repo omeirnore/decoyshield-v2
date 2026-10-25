@@ -3,7 +3,8 @@ import { analyzeUrl } from '@/phishing/url-analyzer';
 import { detectHomograph } from '@/phishing/homograph-detector';
 import { scoreRisk } from '@/phishing/risk-scorer';
 import { checkSafeBrowsing } from './safe-browsing';
-import type { RiskIndicator } from '@/shared/types';
+import type { RiskIndicator, RiskLevel } from '@/shared/types';
+import { recordThreat } from './threat-log';
 
 const sessionAllowlist = new Set<string>();
 const SKIP_SCHEMES = ['chrome:', 'chrome-extension:', 'about:', 'moz-extension:', 'edge:'];
@@ -54,7 +55,16 @@ export async function handleNavigation(
 
   const risk = scoreRisk(indicators);
 
-  if (risk.level === 'high') {
+  const LEVEL_ORDER: Record<RiskLevel, number> = { low: 0, medium: 1, high: 2 };
+  const threshold = settings.phishing.riskThreshold;
+  if (LEVEL_ORDER[risk.level] >= LEVEL_ORDER[threshold]) {
+    await recordThreat({
+      timestamp: Date.now(),
+      url,
+      level: risk.level,
+      action: 'blocked',
+      reason: risk.reasons[0] ?? 'Suspicious URL',
+    });
     const warningUrl = chrome.runtime.getURL('warning/index.html');
     const params = new URLSearchParams({
       url,

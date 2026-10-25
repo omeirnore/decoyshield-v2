@@ -33,6 +33,15 @@ export function apply(
             return new DOMRect(r.x + offsetX, r.y + offsetY, r.width, r.height);
           };
         }
+        if (prop === Symbol.iterator) {
+          return function* () {
+            for (let i = 0; i < target.length; i++) {
+              const r = target.item(i);
+              if (!r) continue;
+              yield new DOMRect(r.x + offsetX, r.y + offsetY, r.width, r.height);
+            }
+          };
+        }
         return Reflect.get(target, prop, receiver);
       },
     });

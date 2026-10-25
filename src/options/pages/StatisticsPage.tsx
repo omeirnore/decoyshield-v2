@@ -1,5 +1,6 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import type { DailyStats } from '@/shared/types';
+import { getStats, clearStats } from '@/background/stats-collector';
 
 const METRICS: Array<{ key: keyof DailyStats; label: string; color: string }> = [
   { key: 'adsBlocked', label: 'Ads Blocked', color: '#4f8cff' },
@@ -12,16 +13,22 @@ const METRICS: Array<{ key: keyof DailyStats; label: string; color: string }> = 
 export function StatisticsPage() {
   const [range, setRange] = useState<'day' | 'week' | 'month'>('day');
   const [confirmClear, setConfirmClear] = useState(false);
+  const [stats, setStats] = useState<DailyStats>({
+    adsBlocked: 0, trackersBlocked: 0, fingerprintProtections: 0,
+    phishingWarnings: 0, cookiesDeleted: 0,
+  });
 
-  const stats: DailyStats = {
-    adsBlocked: 0,
-    trackersBlocked: 0,
-    fingerprintProtections: 0,
-    phishingWarnings: 0,
-    cookiesDeleted: 0,
-  };
+  useEffect(() => {
+    getStats(range).then((s) => setStats(s));
+  }, [range]);
 
   const max = Math.max(1, ...METRICS.map((m) => stats[m.key]));
+
+  const handleClear = async () => {
+    await clearStats();
+    setStats({ adsBlocked: 0, trackersBlocked: 0, fingerprintProtections: 0, phishingWarnings: 0, cookiesDeleted: 0 });
+    setConfirmClear(false);
+  };
 
   return (
     <div>
@@ -61,7 +68,7 @@ export function StatisticsPage() {
             <p>Clear all statistics? This cannot be undone.</p>
             <div class="confirm-actions">
               <button class="btn btn-outline" onClick={() => setConfirmClear(false)}>Cancel</button>
-              <button class="btn btn-danger" onClick={() => setConfirmClear(false)}>Clear</button>
+              <button class="btn btn-danger" onClick={handleClear}>Clear</button>
             </div>
           </div>
         </div>

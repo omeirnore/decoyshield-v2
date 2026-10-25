@@ -4,20 +4,27 @@ export interface HomographResult {
   mixedScripts: string[];
 }
 
-type UnicodeScript = 'Latin' | 'Cyrillic' | 'Greek' | 'Common' | 'Other';
+type UnicodeScript = 'Latin' | 'Cyrillic' | 'Greek' | 'Arabic' | 'Devanagari' | 'Han' | 'Thai' | 'Common' | 'Other';
 
 function classifyChar(code: number): UnicodeScript {
   if (code >= 0x0041 && code <= 0x024f) return 'Latin';
   if (code >= 0x0400 && code <= 0x04ff) return 'Cyrillic';
   if (code >= 0x0370 && code <= 0x03ff) return 'Greek';
-  if (code >= 0x1d00 && code <= 0x1d7f) return 'Latin'; // phonetic extensions
-  if (code >= 0x1e00 && code <= 0x1eff) return 'Latin'; // Latin extended additional
-  if (code >= 0x0500 && code <= 0x052f) return 'Cyrillic'; // Cyrillic supplement
-  if (code >= 0x2de0 && code <= 0x2dff) return 'Cyrillic'; // Cyrillic extended-A
+  if (code >= 0x0600 && code <= 0x06ff) return 'Arabic';
+  if (code >= 0x0900 && code <= 0x097f) return 'Devanagari';
+  if ((code >= 0x4e00 && code <= 0x9fff) || (code >= 0x3400 && code <= 0x4dbf)) return 'Han';
+  if (code >= 0x0e00 && code <= 0x0e7f) return 'Thai';
+  if (code >= 0x1d00 && code <= 0x1d7f) return 'Latin';
+  if (code >= 0x1e00 && code <= 0x1eff) return 'Latin';
+  if (code >= 0x0500 && code <= 0x052f) return 'Cyrillic';
+  if (code >= 0x2de0 && code <= 0x2dff) return 'Cyrillic';
+  if (code >= 0x0750 && code <= 0x077f) return 'Arabic';
+  if (code >= 0x0980 && code <= 0x09ff) return 'Other'; // Bengali
+  if (code >= 0x0d00 && code <= 0x0d7f) return 'Other'; // Malayalam
   if (
-    (code >= 0x0030 && code <= 0x0039) || // digits
-    code === 0x002d || // hyphen
-    code === 0x002e // dot
+    (code >= 0x0030 && code <= 0x0039) ||
+    code === 0x002d ||
+    code === 0x002e
   ) {
     return 'Common';
   }
@@ -59,13 +66,13 @@ export function detectHomograph(domain: string): HomographResult {
     }
   }
 
-  const nonCommon = [...scripts].filter((s) => s !== 'Other');
+  const named = [...scripts];
 
-  if (nonCommon.length > 1) {
+  if (named.length > 1) {
     return {
       isSuspicious: true,
-      reason: `Mixed scripts detected: ${nonCommon.join(', ')}`,
-      mixedScripts: nonCommon,
+      reason: `Mixed scripts detected: ${named.join(', ')}`,
+      mixedScripts: named,
     };
   }
 

@@ -13,9 +13,10 @@ let cachedProfile: FingerprintProfile | null = null;
 
 window.addEventListener('message', (e) => {
   if (e.source === window && e.data?.type === 'ds-fp-config') {
-    configSalt = e.data.salt;
     fpSettings = e.data.settings;
-    cachedProfile = null;
+    if (!cachedProfile) {
+      configSalt = e.data.salt;
+    }
   }
 });
 

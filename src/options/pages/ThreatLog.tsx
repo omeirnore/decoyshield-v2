@@ -1,20 +1,24 @@
-import { useState } from 'preact/hooks';
-
-interface ThreatEntry {
-  timestamp: number;
-  url: string;
-  level: 'low' | 'medium' | 'high';
-  action: string;
-  reason: string;
-}
+import { useState, useEffect } from 'preact/hooks';
+import { getThreatLog, clearThreatLog } from '@/background/threat-log';
+import type { ThreatEntry } from '@/background/threat-log';
 
 const BADGE_CLASS = { low: 'badge-success', medium: 'badge-warning', high: 'badge-danger' } as const;
 
 export function ThreatLog() {
-  const [entries] = useState<ThreatEntry[]>([]);
+  const [entries, setEntries] = useState<ThreatEntry[]>([]);
   const [confirmClear, setConfirmClear] = useState(false);
 
+  useEffect(() => {
+    getThreatLog().then(setEntries);
+  }, []);
+
   const truncateUrl = (url: string) => url.length > 60 ? url.slice(0, 57) + '...' : url;
+
+  const handleClear = async () => {
+    await clearThreatLog();
+    setEntries([]);
+    setConfirmClear(false);
+  };
 
   return (
     <div>
@@ -43,7 +47,7 @@ export function ThreatLog() {
                   <tr key={i}>
                     <td>{new Date(e.timestamp).toLocaleString()}</td>
                     <td title={e.url}>{truncateUrl(e.url)}</td>
-                    <td><span class={`badge ${BADGE_CLASS[e.level]}`}>{e.level}</span></td>
+                    <td><span class={`badge ${BADGE_CLASS[e.level as keyof typeof BADGE_CLASS] ?? 'badge-warning'}`}>{e.level}</span></td>
                     <td>{e.action}</td>
                     <td>{e.reason}</td>
                   </tr>
@@ -66,7 +70,7 @@ export function ThreatLog() {
             <p>Clear the threat log? This cannot be undone.</p>
             <div class="confirm-actions">
               <button class="btn btn-outline" onClick={() => setConfirmClear(false)}>Cancel</button>
-              <button class="btn btn-danger" onClick={() => setConfirmClear(false)}>Clear</button>
+              <button class="btn btn-danger" onClick={handleClear}>Clear</button>
             </div>
           </div>
         </div>
