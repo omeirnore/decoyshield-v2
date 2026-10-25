@@ -141,4 +141,28 @@ export function registerRedirectHandler(): void {
   chrome.webNavigation.onBeforeNavigate.addListener((details) => {
     handleRedirectCheck(details);
   });
+
+  // ─── Catch page-opened popups (new tabs/windows) ────────────
+  // When a page opens a new tab (via window.open, <a target="_blank">,
+  // or any other mechanism), onCreatedNavigationTarget fires with
+  // the source tab ID. If redirect blocker is enabled, close the
+  // new tab immediately — streaming sites use this for popunder ads.
+  chrome.webNavigation.onCreatedNavigationTarget.addListener((details) => {
+    if (!redirectEnabled) return;
+
+    // Only block if the source tab is a real page (not a new tab page)
+    const sourceUrl = tabUrls.get(details.sourceTabId);
+    if (!sourceUrl || isInternalUrl(sourceUrl)) return;
+
+    console.log(`[DecoyShield] Popup tab BLOCKED: tab ${details.tabId} opened by tab ${details.sourceTabId} (${sourceUrl})`);
+
+    // Close the popup tab
+    chrome.tabs.remove(details.tabId);
+
+    // Make sure the source tab stays focused
+    chrome.tabs.update(details.sourceTabId, { active: true });
+
+    // Record as blocked
+    recordStat({ type: 'adsBlocked', timestamp: Date.now() });
+  });
 }
