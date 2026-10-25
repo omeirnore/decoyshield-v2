@@ -1,251 +1,230 @@
 /**
  * Redirect Blocker — Main World Script
  *
- * Intercepts popup/redirect tricks used by streaming & piracy sites:
- * 1. Hijacks window.open() to block ALL popups not triggered by user intent
- * 2. Removes invisible overlay <a> tags that hijack clicks
- * 3. Intercepts location changes triggered by overlay clicks
- * 4. Blocks dynamically injected ad iframes and scripts
+ * Aggressively blocks popunder/redirect ads on streaming sites.
+ * These sites use several tricks:
+ * 1. First-click popunder: any click on the page opens an ad tab first
+ * 2. Hidden <a target="_blank"> overlays on top of video players
+ * 3. window.open() called from click handlers on the document
+ * 4. location.href reassignment from injected scripts
+ *
+ * Strategy: block ALL new-tab/new-window navigations that go to a
+ * different domain, and neutralize overlay elements.
  */
 
-// ─── Helpers ────────────────────────────────────────────────────
+(function DecoyShieldRedirectBlocker() {
+  'use strict';
 
-/** Check whether a click target is a legitimate interactive element */
-function isLegitimateTarget(el: HTMLElement): boolean {
-  const tag = el.tagName;
-  // Video controls, buttons, inputs, nav links inside menus etc.
-  if (['VIDEO', 'INPUT', 'SELECT', 'TEXTAREA'].includes(tag)) return true;
-  // Buttons with visible text
-  if (tag === 'BUTTON' && el.offsetWidth > 0 && el.offsetHeight > 0) return true;
-  // Anchors that are part of actual site navigation (small, visible, with text)
-  if (tag === 'A') {
-    const rect = el.getBoundingClientRect();
-    // A real nav link is smaller than half the viewport
-    if (rect.width < window.innerWidth * 0.4 && rect.height < window.innerHeight * 0.4) {
-      return true;
-    }
-  }
-  return false;
-}
+  const currentHost = location.hostname;
 
-/** Check if an element is an invisible/transparent overlay */
-function isOverlayElement(el: HTMLElement): boolean {
-  const style = getComputedStyle(el);
-  const rect = el.getBoundingClientRect();
-
-  // Large element covering most of the viewport
-  const coversViewport =
-    rect.width > window.innerWidth * 0.5 && rect.height > window.innerHeight * 0.5;
-
-  // Transparent or nearly transparent
-  const isTransparent =
-    style.opacity === '0' ||
-    parseFloat(style.opacity) < 0.1 ||
-    style.background === 'transparent' ||
-    style.backgroundColor === 'transparent' ||
-    style.backgroundColor === 'rgba(0, 0, 0, 0)';
-
-  // High z-index overlay
-  const isHighZ = parseInt(style.zIndex) > 999;
-
-  // Fixed/absolute positioned covering the page
-  const isPositioned = style.position === 'fixed' || style.position === 'absolute';
-
-  if (coversViewport && isPositioned) return true;
-  if (coversViewport && isTransparent) return true;
-  if (isPositioned && isHighZ && isTransparent) return true;
-
-  return false;
-}
-
-// ─── 1. Block window.open() popups ─────────────────────────────
-
-let userClickedRecently = false;
-let userClickTarget: EventTarget | null = null;
-
-// Track genuine user clicks (capture phase, earliest)
-document.addEventListener('pointerdown', (e) => {
-  userClickedRecently = true;
-  userClickTarget = e.target;
-  setTimeout(() => {
-    userClickedRecently = false;
-    userClickTarget = null;
-  }, 300);
-}, true);
-
-const originalOpen = window.open;
-window.open = function (url?: string | URL, target?: string, features?: string): Window | null {
-  const urlStr = url?.toString() ?? '';
-
-  // Only allow window.open if user genuinely clicked a real element
-  if (!userClickedRecently || (userClickTarget && isOverlayElement(userClickTarget as HTMLElement))) {
-    console.log(`[DecoyShield] Blocked popup: ${urlStr}`);
+  // ─── 1. Kill window.open() completely ──────────────────────────
+  // Streaming sites have no legitimate reason to open new windows.
+  // This is the #1 popunder vector.
+  window.open = function (_url?: string | URL, _target?: string, _features?: string): Window | null {
+    const urlStr = _url?.toString() ?? '';
+    console.log(`[DecoyShield] Blocked window.open(): ${urlStr}`);
     window.postMessage({ type: 'ds-popup-blocked', url: urlStr }, '*');
     return null;
-  }
+  };
 
-  return originalOpen.call(window, url, target, features);
-};
-
-// ─── 2. Remove overlay links and divs ──────────────────────────
-
-function removeOverlays() {
-  // Find all links
-  const links = document.querySelectorAll('a');
-  for (const link of links) {
-    const el = link as HTMLAnchorElement;
-    if (!el.href || el.href === '#' || el.href === location.href) continue;
-
-    if (isOverlayElement(el)) {
-      console.log(`[DecoyShield] Removed overlay link: ${el.href}`);
-      el.removeAttribute('href');
-      el.removeAttribute('onclick');
-      el.style.pointerEvents = 'none';
-      el.style.display = 'none';
+  // ─── 2. Block all clicks on <a target="_blank"> to external sites ──
+  document.addEventListener('click', function (e: MouseEvent) {
+    // Walk up from the click target to find any <a> element
+    let el = e.target as HTMLElement | null;
+    while (el && el !== document.documentElement) {
+      if (el.tagName === 'A') {
+        const anchor = el as HTMLAnchorElement;
+        // Block external links that open in new tabs
+        if (anchor.target === '_blank' || anchor.target === '_new') {
+          try {
+            const linkHost = new URL(anchor.href, location.href).hostname;
+            if (linkHost !== currentHost) {
+              console.log(`[DecoyShield] Blocked external redirect: ${anchor.href}`);
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              window.postMessage({ type: 'ds-popup-blocked', url: anchor.href }, '*');
+              return;
+            }
+          } catch { /* invalid URL, let it pass */ }
+        }
+      }
+      el = el.parentElement;
     }
-  }
+  }, true); // capture phase — runs BEFORE the site's own handlers
 
-  // Find divs/spans with high z-index overlays that have click handlers
-  const allElements = document.querySelectorAll('div, span, section');
-  for (const elem of allElements) {
-    const el = elem as HTMLElement;
-    if (isOverlayElement(el) && !el.querySelector('video, iframe[src*="player"]')) {
-      // Don't remove the element if it contains the actual video player
-      const hasPlayer =
-        el.querySelector('video') !== null ||
-        el.querySelector('[class*="player"]') !== null ||
-        el.querySelector('[id*="player"]') !== null;
+  // ─── 3. Neuter onclick attributes on body and major containers ──
+  function stripRedirectHandlers() {
+    // Remove onclick from body and common wrapper elements
+    const targets = [
+      document.body,
+      document.getElementById('app'),
+      document.getElementById('root'),
+      document.getElementById('wrapper'),
+      document.getElementById('container'),
+      document.getElementById('main'),
+      document.querySelector('main'),
+      document.querySelector('.wrapper'),
+      document.querySelector('.container'),
+    ];
 
-      if (!hasPlayer) {
-        el.style.pointerEvents = 'none';
+    for (const el of targets) {
+      if (el && el.getAttribute('onclick')) {
+        console.log(`[DecoyShield] Removed onclick from <${el.tagName}#${el.id}>`);
         el.removeAttribute('onclick');
       }
     }
   }
-}
 
-// ─── 3. Block click-through on overlays ────────────────────────
+  // ─── 4. Remove overlay <a> tags ───────────────────────────────
+  function removeOverlayLinks() {
+    const links = document.querySelectorAll('a[target="_blank"], a[target="_new"]');
+    for (const link of links) {
+      const el = link as HTMLAnchorElement;
+      if (!el.href || el.href === '#') continue;
 
-document.addEventListener('click', (e) => {
-  const target = e.target as HTMLElement;
+      // Check if link is to an external domain
+      try {
+        const linkHost = new URL(el.href, location.href).hostname;
+        if (linkHost === currentHost) continue;
+      } catch { continue; }
 
-  // Don't interfere with video elements or real buttons
-  if (isLegitimateTarget(target)) return;
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
 
-  // Walk up the DOM to check if any parent is an overlay
-  let el: HTMLElement | null = target;
-  while (el && el !== document.body) {
-    if (isOverlayElement(el)) {
-      // Check if this overlay links somewhere (via parent <a> or onclick)
-      const parentLink = el.closest('a');
-      if (parentLink && parentLink.href && parentLink.href !== '#' && parentLink.href !== location.href) {
-        console.log(`[DecoyShield] Blocked overlay click → ${parentLink.href}`);
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        window.postMessage({ type: 'ds-popup-blocked', url: parentLink.href }, '*');
-        return;
-      }
-      // If the overlay itself has an onclick, block it
-      if (el.getAttribute('onclick')) {
-        console.log('[DecoyShield] Blocked overlay onclick');
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        return;
+      // Detect overlays: large elements, or positioned/absolute with high z-index
+      const isLarge = rect.width > 100 && rect.height > 100;
+      const isPositioned = style.position === 'absolute' || style.position === 'fixed';
+      const isTransparent =
+        style.opacity === '0' ||
+        parseFloat(style.opacity) < 0.15 ||
+        style.backgroundColor === 'transparent' ||
+        style.backgroundColor === 'rgba(0, 0, 0, 0)' ||
+        (!style.backgroundImage || style.backgroundImage === 'none') &&
+        (!style.backgroundColor || style.backgroundColor === 'rgba(0, 0, 0, 0)');
+      const hasNoText = (el.textContent?.trim() ?? '').length === 0 && el.querySelectorAll('img').length === 0;
+
+      // It's an overlay if: large + positioned, or transparent + no text, or covering video area
+      if ((isLarge && isPositioned) || (isTransparent && hasNoText) || (isLarge && hasNoText)) {
+        console.log(`[DecoyShield] Removed overlay link: ${el.href}`);
+        el.removeAttribute('href');
+        el.removeAttribute('onclick');
+        el.style.pointerEvents = 'none';
+        el.style.display = 'none';
       }
     }
-    el = el.parentElement;
   }
-}, true); // capture phase
 
-// ─── 4. Intercept location.href hijacking ──────────────────────
-
-// Protect against scripts that do: location.href = "http://ad-site.com"
-// by monitoring and blocking rapid navigation away from the current page
-let lastUserNavTime = 0;
-
-document.addEventListener('click', () => {
-  lastUserNavTime = Date.now();
-}, true);
-
-// Watch for programmatic navigation
-const originalAssign = location.assign;
-const originalReplace = location.replace;
-
-location.assign = function (url: string) {
-  // If no real user interaction in the last 500ms, block it
-  if (Date.now() - lastUserNavTime > 500) {
-    console.log(`[DecoyShield] Blocked location.assign: ${url}`);
-    window.postMessage({ type: 'ds-popup-blocked', url }, '*');
-    return;
-  }
-  return originalAssign.call(location, url);
-};
-
-location.replace = function (url: string) {
-  if (Date.now() - lastUserNavTime > 500) {
-    console.log(`[DecoyShield] Blocked location.replace: ${url}`);
-    window.postMessage({ type: 'ds-popup-blocked', url }, '*');
-    return;
-  }
-  return originalReplace.call(location, url);
-};
-
-// ─── 5. Block ad iframes injected dynamically ──────────────────
-
-const observer = new MutationObserver((mutations) => {
-  for (const mutation of mutations) {
-    for (const node of mutation.addedNodes) {
+  // ─── 5. Block dynamically added ad elements ───────────────────
+  function handleNewNodes(nodes: NodeList) {
+    for (const node of nodes) {
       if (!(node instanceof HTMLElement)) continue;
 
-      // Remove dynamically added iframes that look like ads
-      if (node.tagName === 'IFRAME') {
-        const src = node.getAttribute('src') ?? '';
-        const style = node.getAttribute('style') ?? '';
-        // Zero-size or hidden iframes are tracking/ad related
-        if (
-          style.includes('display:none') ||
-          style.includes('display: none') ||
-          style.includes('width:0') ||
-          style.includes('height:0') ||
-          style.includes('visibility:hidden') ||
-          node.offsetWidth === 0 ||
-          node.offsetHeight === 0
-        ) {
-          console.log(`[DecoyShield] Removed hidden iframe: ${src}`);
-          node.remove();
+      // Kill any new <a target="_blank"> to external domains
+      if (node.tagName === 'A') {
+        const anchor = node as HTMLAnchorElement;
+        if (anchor.target === '_blank' || anchor.target === '_new') {
+          try {
+            const linkHost = new URL(anchor.href, location.href).hostname;
+            if (linkHost !== currentHost) {
+              anchor.removeAttribute('href');
+              anchor.style.pointerEvents = 'none';
+              anchor.style.display = 'none';
+              console.log(`[DecoyShield] Killed injected external link`);
+            }
+          } catch {}
         }
       }
 
-      // Remove overlay elements as they get added
-      if (['A', 'DIV', 'SPAN'].includes(node.tagName) && isOverlayElement(node)) {
-        const hasPlayer =
-          node.querySelector('video') !== null ||
-          node.querySelector('[class*="player"]') !== null;
-        if (!hasPlayer) {
-          node.style.pointerEvents = 'none';
-          if (node.tagName === 'A') {
-            (node as HTMLAnchorElement).removeAttribute('href');
-            node.style.display = 'none';
-          }
-          console.log(`[DecoyShield] Neutralized dynamic overlay: <${node.tagName}>`);
+      // Kill hidden/tiny iframes (tracking pixels, ad loaders)
+      if (node.tagName === 'IFRAME') {
+        const rect = node.getBoundingClientRect();
+        const style = node.getAttribute('style') ?? '';
+        if (
+          rect.width <= 1 || rect.height <= 1 ||
+          style.includes('display:none') || style.includes('display: none') ||
+          style.includes('visibility:hidden') || style.includes('width:0') ||
+          style.includes('height:0') || style.includes('width: 0') ||
+          style.includes('height: 0')
+        ) {
+          console.log(`[DecoyShield] Removed hidden iframe`);
+          node.remove();
+          continue;
+        }
+      }
+
+      // Also check children of added elements
+      const externalLinks = node.querySelectorAll?.('a[target="_blank"], a[target="_new"]');
+      if (externalLinks) {
+        for (const link of externalLinks) {
+          const anchor = link as HTMLAnchorElement;
+          try {
+            const linkHost = new URL(anchor.href, location.href).hostname;
+            if (linkHost !== currentHost) {
+              anchor.removeAttribute('href');
+              anchor.style.pointerEvents = 'none';
+              anchor.style.display = 'none';
+            }
+          } catch {}
         }
       }
     }
   }
-});
 
-// ─── Start everything ──────────────────────────────────────────
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.addedNodes.length > 0) {
+        handleNewNodes(mutation.addedNodes);
+      }
+    }
+  });
 
-function init() {
-  removeOverlays();
-  observer.observe(document.body, { childList: true, subtree: true });
-}
+  // ─── 6. Block location hijacking ─────────────────────────────
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
+  // Prevent scripts from navigating via location.assign/replace
+  const origAssign = location.assign.bind(location);
+  const origReplace = location.replace.bind(location);
 
-// Re-scan periodically since streaming sites inject overlays constantly
-setInterval(removeOverlays, 2000);
+  location.assign = function (url: string) {
+    try {
+      const dest = new URL(url, location.href).hostname;
+      if (dest !== currentHost) {
+        console.log(`[DecoyShield] Blocked location.assign to: ${url}`);
+        window.postMessage({ type: 'ds-popup-blocked', url }, '*');
+        return;
+      }
+    } catch {}
+    return origAssign(url);
+  };
+
+  location.replace = function (url: string) {
+    try {
+      const dest = new URL(url, location.href).hostname;
+      if (dest !== currentHost) {
+        console.log(`[DecoyShield] Blocked location.replace to: ${url}`);
+        window.postMessage({ type: 'ds-popup-blocked', url }, '*');
+        return;
+      }
+    } catch {}
+    return origReplace(url);
+  };
+
+  // ─── Start ────────────────────────────────────────────────────
+
+  function init() {
+    stripRedirectHandlers();
+    removeOverlayLinks();
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Re-scan periodically — streaming sites inject overlays dynamically
+  setInterval(() => {
+    stripRedirectHandlers();
+    removeOverlayLinks();
+  }, 2000);
+})();
