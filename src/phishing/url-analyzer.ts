@@ -17,6 +17,13 @@ const TARGET_BRANDS = [
   'citibank', 'usbank', 'capitalone', 'dropbox', 'linkedin', 'ebay',
 ];
 
+/** Keywords in the URL that strongly suggest credential phishing */
+const PHISHING_KEYWORDS = [
+  'login', 'signin', 'sign-in', 'verify', 'verification', 'account',
+  'password', 'credential', 'secure', 'update', 'confirm', 'authenticate',
+  'wallet', 'suspend', 'restricted', 'unlock', 'recover', 'billing',
+];
+
 const IPV4_REGEX = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 
 export function analyzeUrl(urlString: string): UrlAnalysis {
@@ -74,7 +81,18 @@ export function analyzeUrl(urlString: string): UrlAnalysis {
   }
 
   if (parsed.protocol === 'http:' && !IPV4_REGEX.test(hostname) && !hostname.includes('localhost')) {
-    indicators.push({ type: 'no-https', description: 'No HTTPS', weight: 0.2 });
+    indicators.push({ type: 'no-https', description: 'No HTTPS — connection is not secure', weight: 0.4 });
+
+    // HTTP + phishing keyword in domain or path = very likely phishing
+    const fullUrl = urlString.toLowerCase();
+    const matchedKeywords = PHISHING_KEYWORDS.filter((kw) => fullUrl.includes(kw));
+    if (matchedKeywords.length > 0) {
+      indicators.push({
+        type: 'http-phishing-keywords',
+        description: `Insecure page with login/verification keywords: ${matchedKeywords.join(', ')}`,
+        weight: 0.8,
+      });
+    }
   }
 
   const redirectParams = ['url', 'redirect', 'next', 'goto', 'return_to', 'continue'];
