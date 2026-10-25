@@ -90,7 +90,7 @@ export interface CookieInfo {
   sameSite: string;
   expirationDate?: number;
   session: boolean;
-  partitionKey?: { topLevelSite: string };
+  partitionKey?: { topLevelSite?: string };
 }
 
 export interface FingerprintProfile {
