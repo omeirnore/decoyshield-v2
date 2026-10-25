@@ -49,7 +49,7 @@ export async function getStats(range: 'day' | 'week' | 'month'): Promise<StatsDa
   const byDay: Record<string, DailyStats> = {};
 
   for (const date of dates) {
-    const daily: DailyStats = { ...EMPTY_DAILY, ...(data[storageKey(date)] ?? {}) };
+    const daily: DailyStats = data[storageKey(date)] ?? { ...EMPTY_DAILY };
     byDay[date] = daily;
     for (const k of Object.keys(EMPTY_DAILY) as Array<keyof DailyStats>) {
       totals[k] += daily[k];
