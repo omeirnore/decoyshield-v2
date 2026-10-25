@@ -103,7 +103,7 @@ function handleRedirectCheck(
     chrome.tabs.update(details.tabId, { url: currentUrl });
 
     // Record stat and log for activity feed
-    recordStat({ type: 'adsBlocked', timestamp: Date.now() });
+    recordStat({ type: 'redirectsBlocked', timestamp: Date.now() });
     pushLogEntry({
       domain: newHost,
       type: 'redirect',
@@ -171,7 +171,7 @@ export function registerRedirectHandler(): void {
     chrome.tabs.update(details.sourceTabId, { active: true });
 
     // Record stat and log for activity feed
-    recordStat({ type: 'adsBlocked', timestamp: Date.now() });
+    recordStat({ type: 'redirectsBlocked', timestamp: Date.now() });
     try {
       const popupHost = new URL(details.url).hostname;
       pushLogEntry({

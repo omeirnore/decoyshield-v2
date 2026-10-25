@@ -7,6 +7,7 @@ const EMPTY_DAILY: DailyStats = {
   trackersBlocked: 0,
   fingerprintProtections: 0,
   phishingWarnings: 0,
+  redirectsBlocked: 0,
   cookiesDeleted: 0,
 };
 

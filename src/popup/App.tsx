@@ -15,7 +15,7 @@ interface BlockLogEntry {
 }
 
 function useLiveStats() {
-  const [stats, setStats] = useState({ ads: 0, trackers: 0, fingerprints: 0, phishing: 0 });
+  const [stats, setStats] = useState({ ads: 0, trackers: 0, fingerprints: 0, phishing: 0, redirects: 0 });
 
   useEffect(() => {
     function fetchStats() {
@@ -26,6 +26,7 @@ function useLiveStats() {
           trackers: resp.trackersBlocked ?? 0,
           fingerprints: resp.fingerprintProtections ?? 0,
           phishing: resp.phishingWarnings ?? 0,
+          redirects: resp.redirectsBlocked ?? 0,
         });
       });
     }
@@ -164,7 +165,7 @@ export function App() {
           icon="&#x1F6E1;"
           enabled={settings.redirectBlock.enabled}
           onToggle={() => toggle({ redirectBlock: { enabled: !settings.redirectBlock.enabled } })}
-          stats={[]}
+          stats={[{ label: 'blocked', count: stats.redirects }]}
         />
       </div>
 
