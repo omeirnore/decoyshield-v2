@@ -9,6 +9,10 @@ async function bridge() {
       },
       '*',
     );
+    // Count this page as fingerprint-protected (one per page load)
+    if (data.fingerprintSettings?.enabled !== false) {
+      chrome.runtime.sendMessage({ type: 'RECORD_STAT', statType: 'fingerprintProtections' });
+    }
   }
 }
 

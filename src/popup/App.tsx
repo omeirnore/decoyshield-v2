@@ -6,6 +6,12 @@ import { ModuleCard } from './components/ModuleCard';
 import { StatsBar } from './components/StatsBar';
 import './styles/popup.css';
 
+interface BlockLogEntry {
+  domain: string;
+  type: 'ad' | 'tracker';
+  timestamp: number;
+}
+
 function useLiveStats() {
   const [stats, setStats] = useState({ ads: 0, trackers: 0, fingerprints: 0, phishing: 0 });
 
@@ -13,7 +19,6 @@ function useLiveStats() {
     function fetchStats() {
       chrome.runtime.sendMessage({ type: 'GET_STATS', range: 'day' }, (resp: StatsData | undefined) => {
         if (!resp) return;
-        // StatsData extends DailyStats – totals are at the top level
         setStats({
           ads: resp.adsBlocked ?? 0,
           trackers: resp.trackersBlocked ?? 0,
@@ -23,16 +28,67 @@ function useLiveStats() {
       });
     }
     fetchStats();
-    const id = setInterval(fetchStats, 3000); // refresh every 3s while popup is open
+    const id = setInterval(fetchStats, 3000);
     return () => clearInterval(id);
   }, []);
 
   return stats;
 }
 
+function useBlockLog() {
+  const [log, setLog] = useState<BlockLogEntry[]>([]);
+
+  useEffect(() => {
+    function fetchLog() {
+      chrome.runtime.sendMessage({ type: 'GET_BLOCK_LOG' }, (resp: BlockLogEntry[] | undefined) => {
+        if (resp) setLog([...resp].reverse()); // newest first
+      });
+    }
+    fetchLog();
+    const id = setInterval(fetchLog, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  return log;
+}
+
+function formatTime(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function ActivityLog({ log }: { log: BlockLogEntry[] }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div class="activity-log">
+      <div class="activity-log-header" onClick={() => setOpen(!open)}>
+        <span class="activity-log-title">Activity Log ({log.length})</span>
+        <span class="activity-log-toggle">{open ? '▲' : '▼'}</span>
+      </div>
+      {open && (
+        <div class="activity-log-list">
+          {log.length === 0 ? (
+            <div class="log-empty">No blocked requests yet. Browse some websites!</div>
+          ) : (
+            log.slice(0, 50).map((entry, i) => (
+              <div class="activity-log-item" key={i}>
+                <span class={`log-badge ${entry.type}`}>{entry.type}</span>
+                <span class="log-domain" title={entry.domain}>{entry.domain}</span>
+                <span class="log-time">{formatTime(entry.timestamp)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function App() {
   const [settings, setSettings] = useState<DecoyShieldSettings | null>(null);
   const stats = useLiveStats();
+  const blockLog = useBlockLog();
 
   useEffect(() => {
     getSettings().then(setSettings);
@@ -86,6 +142,8 @@ export function App() {
         fingerprints={stats.fingerprints}
         phishing={stats.phishing}
       />
+
+      <ActivityLog log={blockLog} />
 
       <a class="settings-link" onClick={() => chrome.runtime.openOptionsPage()}>
         Open Settings

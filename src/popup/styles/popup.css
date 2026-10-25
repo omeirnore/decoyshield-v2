@@ -195,6 +195,99 @@ body {
   letter-spacing: 0.5px;
 }
 
+.activity-log {
+  background: var(--ds-bg-card);
+  border-radius: var(--ds-radius);
+  border: 1px solid var(--ds-border);
+  overflow: hidden;
+}
+
+.activity-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.activity-log-header:hover {
+  background: var(--ds-bg-hover);
+}
+
+.activity-log-title {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ds-text-muted);
+}
+
+.activity-log-toggle {
+  font-size: 10px;
+  color: var(--ds-text-muted);
+}
+
+.activity-log-list {
+  max-height: 180px;
+  overflow-y: auto;
+  border-top: 1px solid var(--ds-border);
+}
+
+.activity-log-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(42, 58, 92, 0.4);
+}
+
+.activity-log-item:last-child {
+  border-bottom: none;
+}
+
+.log-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.log-badge.ad {
+  background: rgba(255, 71, 87, 0.2);
+  color: var(--ds-danger);
+}
+
+.log-badge.tracker {
+  background: rgba(255, 165, 2, 0.2);
+  color: var(--ds-warning);
+}
+
+.log-domain {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-text);
+}
+
+.log-time {
+  font-size: 10px;
+  color: var(--ds-text-muted);
+  flex-shrink: 0;
+}
+
+.log-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--ds-text-muted);
+  font-size: 11px;
+}
+
 .settings-link {
   display: block;
   text-align: center;

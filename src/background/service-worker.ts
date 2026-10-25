@@ -59,13 +59,29 @@ onSettingsChanged(() => { syncFingerprintState(); syncBlockingState(); });
 
 registerPhishingHandler();
 
+// --- Recent block log (kept in memory, lost on SW restart) ---
+interface BlockLogEntry {
+  domain: string;
+  type: 'ad' | 'tracker';
+  timestamp: number;
+}
+const blockLog: BlockLogEntry[] = [];
+const MAX_LOG = 200;
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'ALLOW_URL' && typeof message.payload === 'string') {
     allowUrl(message.payload);
   }
   if (message?.type === 'GET_STATS') {
     getStats(message.range ?? 'day').then((stats) => sendResponse(stats));
-    return true; // keep channel open for async response
+    return true;
+  }
+  if (message?.type === 'RECORD_STAT' && message.statType) {
+    recordStat({ type: message.statType, timestamp: Date.now() });
+  }
+  if (message?.type === 'GET_BLOCK_LOG') {
+    sendResponse(blockLog);
+    return false;
   }
 });
 
@@ -81,10 +97,19 @@ try {
     const statType = classifyRule(info.rule.ruleId);
     if (statType) {
       recordStat({ type: statType, timestamp: Date.now() });
+      // Log the blocked domain for the activity feed
+      try {
+        const url = new URL(info.request.url);
+        blockLog.push({
+          domain: url.hostname,
+          type: statType === 'adsBlocked' ? 'ad' : 'tracker',
+          timestamp: Date.now(),
+        });
+        if (blockLog.length > MAX_LOG) blockLog.shift();
+      } catch { /* ignore bad URLs */ }
     }
   });
 } catch {
-  // onRuleMatchedDebug only available when the extension was loaded unpacked
   console.warn('DecoyShield: onRuleMatchedDebug not available (packed extension)');
 }
 
