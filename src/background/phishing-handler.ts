@@ -5,6 +5,7 @@ import { scoreRisk } from '@/phishing/risk-scorer';
 import { checkSafeBrowsing } from './safe-browsing';
 import type { RiskIndicator, RiskLevel } from '@/shared/types';
 import { recordThreat } from './threat-log';
+import { recordStat } from './stats-collector';
 
 const sessionAllowlist = new Set<string>();
 const SKIP_SCHEMES = ['chrome:', 'chrome-extension:', 'about:', 'moz-extension:', 'edge:'];
@@ -65,6 +66,7 @@ export async function handleNavigation(
       action: 'blocked',
       reason: risk.reasons[0] ?? 'Suspicious URL',
     });
+    await recordStat({ type: 'phishingWarnings', timestamp: Date.now() });
     const warningUrl = chrome.runtime.getURL('warning/index.html');
     const params = new URLSearchParams({
       url,
