@@ -5,6 +5,7 @@ import {
 } from './fingerprint-registrar';
 import { registerPhishingHandler, allowUrl } from './phishing-handler';
 import { registerRedirectHandler } from './redirect-handler';
+import { registerCookieHandler, cleanTrackingCookies, deepCleanCookies } from './cookie-handler';
 import { enableRuleset, disableRuleset, checkRuleCapacity } from './dnr-manager';
 import { recordStat, getStats } from './stats-collector';
 import { pushLogEntry, getBlockLog } from './block-log';
@@ -61,6 +62,7 @@ onSettingsChanged(() => { syncFingerprintState(); syncBlockingState(); });
 
 registerPhishingHandler();
 registerRedirectHandler();
+registerCookieHandler();
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'ALLOW_URL' && typeof message.payload === 'string') {
@@ -76,6 +78,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'GET_BLOCK_LOG') {
     sendResponse(getBlockLog());
     return false;
+  }
+  if (message?.type === 'CLEAN_COOKIES') {
+    cleanTrackingCookies().then((count) => sendResponse({ deleted: count }));
+    return true;
+  }
+  if (message?.type === 'DEEP_CLEAN_COOKIES') {
+    deepCleanCookies().then((count) => sendResponse({ deleted: count }));
+    return true;
   }
 });
 

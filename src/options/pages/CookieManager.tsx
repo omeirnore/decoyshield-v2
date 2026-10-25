@@ -1,11 +1,32 @@
-import { useState } from 'preact/hooks';
-import type { CookieInfo } from '@/shared/types';
+import { useState, useEffect } from 'preact/hooks';
+import type { CookieInfo, DecoyShieldSettings } from '@/shared/types';
 import { getCookiesForDomain, deleteCookie, deleteAllCookiesForDomain } from '@/background/cookie-service';
+import { getSettings, updateSettings, onSettingsChanged } from '@/shared/storage';
 
 export function CookieManager() {
   const [domain, setDomain] = useState('');
   const [cookies, setCookies] = useState<CookieInfo[]>([]);
   const [confirm, setConfirm] = useState<{ action: () => Promise<void>; msg: string } | null>(null);
+  const [settings, setSettings] = useState<DecoyShieldSettings | null>(null);
+  const [newWhitelist, setNewWhitelist] = useState('');
+
+  useEffect(() => {
+    getSettings().then(setSettings);
+    return onSettingsChanged((s) => setSettings(s));
+  }, []);
+
+  const whitelist = settings?.cookies.whitelist ?? [];
+
+  const addWhitelist = () => {
+    const d = newWhitelist.trim().toLowerCase();
+    if (!d || whitelist.includes(d)) return;
+    updateSettings({ cookies: { whitelist: [...whitelist, d] } });
+    setNewWhitelist('');
+  };
+
+  const removeWhitelist = (domain: string) => {
+    updateSettings({ cookies: { whitelist: whitelist.filter((w) => w !== domain) } });
+  };
 
   const loadCookies = async () => {
     if (!domain.trim()) return;
@@ -44,8 +65,40 @@ export function CookieManager() {
 
   return (
     <div>
+      {/* ─── Cookie Whitelist ──────────────────────────────── */}
       <div class="section">
-        <h2>Cookie Manager</h2>
+        <h2>Cookie Whitelist</h2>
+        <p class="info-text" style={{ marginBottom: '12px' }}>
+          Cookies from whitelisted domains will never be auto-deleted.
+          Add domains for sites where you want to stay logged in.
+        </p>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+          <input
+            class="input-field"
+            placeholder="Enter domain (e.g. google.com)"
+            value={newWhitelist}
+            onInput={(e) => setNewWhitelist((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => e.key === 'Enter' && addWhitelist()}
+          />
+          <button class="btn btn-primary" onClick={addWhitelist}>Add</button>
+        </div>
+        {whitelist.length > 0 ? (
+          <div class="whitelist-list">
+            {whitelist.map((d) => (
+              <div class="whitelist-item" key={d}>
+                <span class="whitelist-domain">{d}</span>
+                <button class="btn btn-outline btn-sm" onClick={() => removeWhitelist(d)}>Remove</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div class="empty-state">No whitelisted domains. All tracking cookies will be auto-deleted.</div>
+        )}
+      </div>
+
+      {/* ─── Cookie Inspector ──────────────────────────────── */}
+      <div class="section">
+        <h2>Cookie Inspector</h2>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <input class="input-field" placeholder="Enter domain (e.g. example.com)"
             value={domain} onInput={(e) => setDomain((e.target as HTMLInputElement).value)}

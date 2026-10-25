@@ -348,3 +348,43 @@ body {
 .settings-link:hover {
   background: var(--ds-bg-hover);
 }
+
+.cookie-card .module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cookie-clean-btn {
+  background: rgba(79, 140, 255, 0.15);
+  color: var(--ds-accent);
+  border: 1px solid rgba(79, 140, 255, 0.3);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: flex-start;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cookie-clean-btn:hover:not(:disabled) {
+  background: rgba(79, 140, 255, 0.25);
+  border-color: var(--ds-accent);
+}
+
+.cookie-clean-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cookie-clean-btn.cleaning {
+  opacity: 0.6;
+}
+
+.cookie-result {
+  color: var(--ds-success) !important;
+  font-weight: 600;
+}

@@ -28,6 +28,7 @@ export interface RedirectBlockSettings {
 
 export interface CookieSettings {
   enabled: boolean;
+  whitelist: string[];
 }
 
 export interface StatisticsSettings {

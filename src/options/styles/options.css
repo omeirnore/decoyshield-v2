@@ -311,3 +311,30 @@ body {
   padding: 40px;
   color: var(--ds-text-muted);
 }
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.whitelist-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.whitelist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--ds-bg);
+  border-radius: 6px;
+  border: 1px solid var(--ds-border);
+}
+
+.whitelist-domain {
+  font-size: 13px;
+  font-family: monospace;
+  color: var(--ds-text);
+}

@@ -3,6 +3,7 @@ import type { DecoyShieldSettings, StatsData } from '@/shared/types';
 import { getSettings, updateSettings, onSettingsChanged } from '@/shared/storage';
 import { ProtectionStatus } from './components/ProtectionStatus';
 import { ModuleCard } from './components/ModuleCard';
+import { CookieCard } from './components/CookieCard';
 import { StatsBar } from './components/StatsBar';
 import './styles/popup.css';
 
@@ -15,7 +16,7 @@ interface BlockLogEntry {
 }
 
 function useLiveStats() {
-  const [stats, setStats] = useState({ ads: 0, trackers: 0, fingerprints: 0, phishing: 0, redirects: 0 });
+  const [stats, setStats] = useState({ ads: 0, trackers: 0, fingerprints: 0, phishing: 0, redirects: 0, cookies: 0 });
 
   useEffect(() => {
     function fetchStats() {
@@ -27,6 +28,7 @@ function useLiveStats() {
           fingerprints: resp.fingerprintProtections ?? 0,
           phishing: resp.phishingWarnings ?? 0,
           redirects: resp.redirectsBlocked ?? 0,
+          cookies: resp.cookiesDeleted ?? 0,
         });
       });
     }
@@ -166,6 +168,11 @@ export function App() {
           enabled={settings.redirectBlock.enabled}
           onToggle={() => toggle({ redirectBlock: { enabled: !settings.redirectBlock.enabled } })}
           stats={[{ label: 'blocked', count: stats.redirects }]}
+        />
+        <CookieCard
+          enabled={settings.cookies.enabled}
+          onToggle={() => toggle({ cookies: { enabled: !settings.cookies.enabled } })}
+          deletedCount={stats.cookies}
         />
       </div>
 

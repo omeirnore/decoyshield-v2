@@ -30,7 +30,8 @@ export const DEFAULT_SETTINGS: Readonly<DecoyShieldSettings> = Object.freeze({
   }),
   cookies: Object.freeze({
     enabled: true,
-  }),
+    whitelist: [] as readonly string[],
+  }) as DecoyShieldSettings['cookies'],
   statistics: Object.freeze({
     enabled: true,
   }),
