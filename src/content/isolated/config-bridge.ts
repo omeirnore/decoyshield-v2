@@ -1,3 +1,5 @@
+import { getSettings } from '@/shared/storage';
+
 async function bridge() {
   const data = await chrome.storage.session.get(['sessionSalt', 'fingerprintSettings']);
   if (data.sessionSalt) {
@@ -14,6 +16,16 @@ async function bridge() {
       chrome.runtime.sendMessage({ type: 'RECORD_STAT', statType: 'fingerprintProtections' });
     }
   }
+
+  // Send redirect-block enabled state to the main-world redirect blocker
+  const settings = await getSettings();
+  window.postMessage(
+    {
+      type: 'ds-redirect-config',
+      enabled: settings.masterEnabled && settings.redirectBlock.enabled,
+    },
+    '*',
+  );
 }
 
 bridge();

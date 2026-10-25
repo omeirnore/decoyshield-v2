@@ -22,6 +22,10 @@ export interface PhishingSettings {
   riskThreshold: RiskLevel;
 }
 
+export interface RedirectBlockSettings {
+  enabled: boolean;
+}
+
 export interface CookieSettings {
   enabled: boolean;
 }
@@ -35,6 +39,7 @@ export interface DecoyShieldSettings {
   fingerprint: FingerprintSettings;
   blocking: BlockingSettings;
   phishing: PhishingSettings;
+  redirectBlock: RedirectBlockSettings;
   cookies: CookieSettings;
   statistics: StatisticsSettings;
 }

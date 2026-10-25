@@ -135,6 +135,13 @@ export function App() {
           onToggle={() => toggle({ phishing: { enabled: !settings.phishing.enabled } })}
           stats={[{ label: 'warnings', count: stats.phishing }]}
         />
+        <ModuleCard
+          title="Redirect Blocker"
+          icon="&#x1F6E1;"
+          enabled={settings.redirectBlock.enabled}
+          onToggle={() => toggle({ redirectBlock: { enabled: !settings.redirectBlock.enabled } })}
+          stats={[]}
+        />
       </div>
 
       <StatsBar

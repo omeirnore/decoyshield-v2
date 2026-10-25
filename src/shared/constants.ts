@@ -25,6 +25,9 @@ export const DEFAULT_SETTINGS: Readonly<DecoyShieldSettings> = Object.freeze({
     safeBrowsingApiKey: '',
     riskThreshold: 'medium' as const,
   }),
+  redirectBlock: Object.freeze({
+    enabled: true,
+  }),
   cookies: Object.freeze({
     enabled: true,
   }),

@@ -15,12 +15,28 @@
 (function DecoyShieldRedirectBlocker() {
   'use strict';
 
+  let enabled = false;
   const currentHost = location.hostname;
+
+  // Wait for config from the isolated-world config-bridge
+  window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.type === 'ds-redirect-config') {
+      enabled = event.data.enabled;
+      if (enabled) {
+        console.log('[DecoyShield] Redirect Blocker: ON');
+      } else {
+        console.log('[DecoyShield] Redirect Blocker: OFF');
+      }
+    }
+  });
 
   // ─── 1. Kill window.open() completely ──────────────────────────
   // Streaming sites have no legitimate reason to open new windows.
   // This is the #1 popunder vector.
+  const originalOpen = window.open;
   window.open = function (_url?: string | URL, _target?: string, _features?: string): Window | null {
+    if (!enabled) return originalOpen.call(window, _url, _target, _features);
     const urlStr = _url?.toString() ?? '';
     console.log(`[DecoyShield] Blocked window.open(): ${urlStr}`);
     window.postMessage({ type: 'ds-popup-blocked', url: urlStr }, '*');
@@ -29,6 +45,7 @@
 
   // ─── 2. Block all clicks on <a target="_blank"> to external sites ──
   document.addEventListener('click', function (e: MouseEvent) {
+    if (!enabled) return;
     // Walk up from the click target to find any <a> element
     let el = e.target as HTMLElement | null;
     while (el && el !== document.documentElement) {
@@ -185,6 +202,7 @@
   const origReplace = location.replace.bind(location);
 
   location.assign = function (url: string) {
+    if (!enabled) return origAssign(url);
     try {
       const dest = new URL(url, location.href).hostname;
       if (dest !== currentHost) {
@@ -197,6 +215,7 @@
   };
 
   location.replace = function (url: string) {
+    if (!enabled) return origReplace(url);
     try {
       const dest = new URL(url, location.href).hostname;
       if (dest !== currentHost) {
