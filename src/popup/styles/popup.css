@@ -388,3 +388,90 @@ body {
   color: var(--ds-success) !important;
   font-weight: 600;
 }
+
+/* Module card wrapper for expandable children */
+.module-card-wrapper {
+  background: var(--ds-bg-card);
+  border-radius: var(--ds-radius);
+  border: 1px solid var(--ds-border);
+  overflow: hidden;
+}
+
+.module-card-wrapper > .module-card {
+  border: none;
+  border-radius: 0;
+}
+
+/* Fingerprint sub-types */
+.fp-expand-toggle {
+  display: flex;
+  align-items: center;
+  padding: 5px 12px;
+  font-size: 10px;
+  color: var(--ds-text-muted);
+  cursor: pointer;
+  user-select: none;
+  border-top: 1px solid var(--ds-border);
+}
+
+.fp-expand-toggle:hover {
+  color: var(--ds-text);
+  background: var(--ds-bg-hover);
+}
+
+.fp-subtypes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  padding: 6px 12px 10px;
+}
+
+.fp-subtype-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.fp-subtype-label {
+  font-size: 11px;
+  color: var(--ds-text-muted);
+}
+
+.fp-subtype-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.fp-subtype-badge.active {
+  background: rgba(46, 213, 115, 0.15);
+  color: var(--ds-success);
+}
+
+.fp-subtype-badge.off {
+  background: rgba(255, 71, 87, 0.15);
+  color: var(--ds-danger);
+}
+
+/* Weekly Report button */
+.report-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--ds-bg-card);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  color: var(--ds-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.report-btn:hover {
+  background: var(--ds-bg-hover);
+}

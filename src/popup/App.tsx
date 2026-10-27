@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'preact/hooks';
-import type { DecoyShieldSettings, StatsData } from '@/shared/types';
+import type { DecoyShieldSettings, StatsData, FingerprintSettings } from '@/shared/types';
 import { getSettings, updateSettings, onSettingsChanged } from '@/shared/storage';
 import { ProtectionStatus } from './components/ProtectionStatus';
 import { ModuleCard } from './components/ModuleCard';
 import { CookieCard } from './components/CookieCard';
 import { StatsBar } from './components/StatsBar';
 import './styles/popup.css';
+
+const FP_SUBTYPES: Array<{ key: keyof Omit<FingerprintSettings, 'enabled'>; label: string }> = [
+  { key: 'canvas', label: 'Canvas' },
+  { key: 'webgl', label: 'WebGL' },
+  { key: 'navigator', label: 'Navigator' },
+  { key: 'screen', label: 'Screen' },
+  { key: 'audioContext', label: 'Audio' },
+  { key: 'clientRects', label: 'ClientRects' },
+];
 
 interface BlockLogEntry {
   domain: string;
@@ -124,6 +133,7 @@ export function App() {
 
   if (!settings) return null;
 
+  const [fpExpanded, setFpExpanded] = useState(false);
   const toggle = (path: Record<string, unknown>) => updateSettings(path);
 
   return (
@@ -140,7 +150,23 @@ export function App() {
           enabled={settings.fingerprint.enabled}
           onToggle={() => toggle({ fingerprint: { enabled: !settings.fingerprint.enabled } })}
           stats={[{ label: 'protected', count: stats.fingerprints }]}
-        />
+        >
+          <div class="fp-expand-toggle" onClick={() => setFpExpanded(!fpExpanded)}>
+            <span>{fpExpanded ? '▲' : '▼'} Protection types</span>
+          </div>
+          {fpExpanded && (
+            <div class="fp-subtypes">
+              {FP_SUBTYPES.map(({ key, label }) => (
+                <div class="fp-subtype-row" key={key}>
+                  <span class="fp-subtype-label">{label}</span>
+                  <span class={`fp-subtype-badge ${settings.fingerprint[key] ? 'active' : 'off'}`}>
+                    {settings.fingerprint[key] ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </ModuleCard>
         <ModuleCard
           title="Ad Blocking"
           icon="&#x1F6AB;"
@@ -183,6 +209,13 @@ export function App() {
       />
 
       <ActivityLog log={blockLog} />
+
+      <button
+        class="report-btn"
+        onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('report/index.html') })}
+      >
+        &#x1F4CA; Weekly Security Report
+      </button>
 
       <a class="settings-link" onClick={() => chrome.runtime.openOptionsPage()}>
         Open Settings

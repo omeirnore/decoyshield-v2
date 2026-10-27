@@ -146,8 +146,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
   if (message?.type === 'GET_BLOCK_LOG') {
-    sendResponse(getBlockLog());
-    return false;
+    getBlockLog().then((log) => sendResponse(log));
+    return true;
   }
   if (message?.type === 'CLEAN_COOKIES') {
     cleanTrackingCookies().then((count) => sendResponse({ deleted: count }));
