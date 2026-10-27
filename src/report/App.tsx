@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'preact/hooks';
-import type { StatsData, DailyStats } from '@/shared/types';
+import { useState, useEffect, useCallback } from 'preact/hooks';
+import type { StatsData, DailyStats, DecoyShieldSettings } from '@/shared/types';
+import { getSettings, updateSettings, onSettingsChanged } from '@/shared/storage';
 import './styles/report.css';
 
 interface WeeklyReport {
@@ -23,6 +24,9 @@ const STAT_LABELS: Record<keyof DailyStats, { label: string; icon: string }> = {
   cookiesDeleted: { label: 'Cookies Deleted', icon: '\u{1F36A}' },
 };
 
+const SECTIONS = ['Overview', 'Daily Breakdown', 'Protection Modules', 'Recommendations'] as const;
+type Section = typeof SECTIONS[number];
+
 function getTrend(current: number, previous: number): { pct: number; direction: 'up' | 'down' | 'flat' } {
   if (previous === 0 && current === 0) return { pct: 0, direction: 'flat' };
   if (previous === 0) return { pct: 100, direction: 'up' };
@@ -35,7 +39,6 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
   const tips: Remediation[] = [];
   const { current, previous } = report;
 
-  // Phishing warnings
   if (current.phishingWarnings > 0) {
     tips.push({
       icon: '\u{26A0}\u{FE0F}',
@@ -52,7 +55,6 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
     });
   }
 
-  // Tracker trend
   const trackerTrend = getTrend(current.trackersBlocked, previous.trackersBlocked);
   if (trackerTrend.direction === 'up' && trackerTrend.pct > 30) {
     tips.push({
@@ -70,7 +72,6 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
     });
   }
 
-  // Ads blocked
   if (current.adsBlocked > 100) {
     tips.push({
       icon: '\u{1F4A1}',
@@ -87,12 +88,11 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
     });
   }
 
-  // Fingerprint protections
   if (current.fingerprintProtections === 0) {
     tips.push({
       icon: '\u{1F9EC}',
       title: 'No fingerprint protections recorded',
-      description: 'Fingerprint protection may be disabled. Enable it in DecoyShield settings to prevent sites from uniquely identifying your browser.',
+      description: 'Fingerprint protection may be disabled. Enable it in the Protection Modules section to prevent sites from uniquely identifying your browser.',
       severity: 'warning',
     });
   } else {
@@ -104,7 +104,6 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
     });
   }
 
-  // Redirects
   if (current.redirectsBlocked > 0) {
     const redirectTrend = getTrend(current.redirectsBlocked, previous.redirectsBlocked);
     const trendText = redirectTrend.direction === 'up' ? ` (${redirectTrend.pct}% increase)` : '';
@@ -116,7 +115,6 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
     });
   }
 
-  // Cookies deleted
   if (current.cookiesDeleted > 0) {
     tips.push({
       icon: '\u{1F36A}',
@@ -134,43 +132,50 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function StatCard({ statKey, current, previous }: {
-  statKey: keyof DailyStats;
-  current: number;
-  previous: number;
-}) {
-  const { label, icon } = STAT_LABELS[statKey];
-  const trend = getTrend(current, previous);
+/* ─── Section Components ─── */
 
+function OverviewSection({ report }: { report: WeeklyReport }) {
+  const statKeys = Object.keys(STAT_LABELS) as Array<keyof DailyStats>;
   return (
-    <div class="stat-card">
-      <div class="stat-icon">{icon}</div>
-      <div class="stat-value">{current.toLocaleString()}</div>
-      <div class="stat-label">{label}</div>
-      {trend.direction !== 'flat' && (
-        <div class={`stat-trend trend-${trend.direction}`}>
-          {trend.direction === 'up' ? '↑' : '↓'} {trend.pct}%
-        </div>
-      )}
-      {trend.direction === 'flat' && <div class="stat-trend trend-flat">— No change</div>}
+    <div class="section-content">
+      <div class="stats-grid">
+        {statKeys.map((key) => {
+          const { label, icon } = STAT_LABELS[key];
+          const trend = getTrend(report.current[key], report.previous[key]);
+          return (
+            <div class="stat-card" key={key}>
+              <div class="stat-icon">{icon}</div>
+              <div class="stat-value">{report.current[key].toLocaleString()}</div>
+              <div class="stat-label">{label}</div>
+              {trend.direction !== 'flat' ? (
+                <div class={`stat-trend trend-${trend.direction}`}>
+                  {trend.direction === 'up' ? '↑' : '↓'} {trend.pct}%
+                  <span class="trend-label"> vs last week</span>
+                </div>
+              ) : (
+                <div class="stat-trend trend-flat">{'—'} No change</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function DailyBreakdown({ byDay }: { byDay: Record<string, DailyStats> }) {
+function DailyBreakdownSection({ byDay }: { byDay: Record<string, DailyStats> }) {
   const days = Object.entries(byDay).sort(([a], [b]) => a.localeCompare(b));
+  if (days.length === 0) {
+    return <div class="section-content"><div class="empty-state">No daily data available yet.</div></div>;
+  }
 
-  if (days.length === 0) return null;
-
-  // Find max total for bar scaling
   const maxTotal = Math.max(
     ...days.map(([, d]) => d.adsBlocked + d.trackersBlocked + d.fingerprintProtections + d.phishingWarnings + d.redirectsBlocked + d.cookiesDeleted),
     1,
   );
 
   return (
-    <div class="section">
-      <h2>Daily Breakdown</h2>
+    <div class="section-content">
       <div class="daily-chart">
         {days.map(([date, stats]) => {
           const total = stats.adsBlocked + stats.trackersBlocked + stats.fingerprintProtections + stats.phishingWarnings + stats.redirectsBlocked + stats.cookiesDeleted;
@@ -179,7 +184,7 @@ function DailyBreakdown({ byDay }: { byDay: Record<string, DailyStats> }) {
             <div class="day-row" key={date}>
               <span class="day-label">{formatDate(date)}</span>
               <div class="day-bar-track">
-                <div class="day-bar-fill" style={{ width: `${pct}%` }}></div>
+                <div class="day-bar-fill" style={{ width: `${pct}%` }} />
               </div>
               <span class="day-total">{total.toLocaleString()}</span>
             </div>
@@ -190,56 +195,140 @@ function DailyBreakdown({ byDay }: { byDay: Record<string, DailyStats> }) {
   );
 }
 
+function ProtectionModulesSection({ settings }: { settings: DecoyShieldSettings }) {
+  const modules = [
+    {
+      icon: '\u{1F9EC}', label: 'Fingerprint Protection',
+      desc: 'Randomizes browser fingerprint per-site to prevent cross-site tracking',
+      enabled: settings.fingerprint.enabled,
+      toggle: () => updateSettings({ fingerprint: { enabled: !settings.fingerprint.enabled } }),
+    },
+    {
+      icon: '\u{1F6AB}', label: 'Ad Blocking',
+      desc: 'Blocks ads using curated filter rules',
+      enabled: settings.blocking.adsEnabled,
+      toggle: () => updateSettings({ blocking: { adsEnabled: !settings.blocking.adsEnabled } }),
+    },
+    {
+      icon: '\u{1F441}', label: 'Tracker Blocking',
+      desc: 'Blocks known tracking scripts and pixels',
+      enabled: settings.blocking.trackersEnabled,
+      toggle: () => updateSettings({ blocking: { trackersEnabled: !settings.blocking.trackersEnabled } }),
+    },
+    {
+      icon: '\u{1F3A3}', label: 'Phishing Protection',
+      desc: 'Warns before visiting suspected phishing sites',
+      enabled: settings.phishing.enabled,
+      toggle: () => updateSettings({ phishing: { enabled: !settings.phishing.enabled } }),
+    },
+    {
+      icon: '\u{1F6E1}', label: 'Redirect Blocker',
+      desc: 'Intercepts malicious redirects and popup navigations',
+      enabled: settings.redirectBlock.enabled,
+      toggle: () => updateSettings({ redirectBlock: { enabled: !settings.redirectBlock.enabled } }),
+    },
+    {
+      icon: '\u{1F36A}', label: 'Cookie Manager',
+      desc: 'Automatically deletes tracking cookies from known domains',
+      enabled: settings.cookies.enabled,
+      toggle: () => updateSettings({ cookies: { enabled: !settings.cookies.enabled } }),
+    },
+  ];
+
+  return (
+    <div class="section-content">
+      <div class="modules-list">
+        {modules.map((m) => (
+          <div class="module-row" key={m.label}>
+            <span class="module-icon">{m.icon}</span>
+            <div class="module-detail">
+              <div class="module-name">{m.label}</div>
+              <div class="module-desc">{m.desc}</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" checked={m.enabled} onChange={m.toggle} />
+              <span class="toggle-slider" />
+            </label>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecommendationsSection({ report }: { report: WeeklyReport }) {
+  const remediations = generateRemediations(report);
+  return (
+    <div class="section-content">
+      <div class="remediation-list">
+        {remediations.map((tip, i) => (
+          <div key={i} class={`remediation-card severity-${tip.severity}`}>
+            <div class="remediation-icon">{tip.icon}</div>
+            <div class="remediation-content">
+              <div class="remediation-title">{tip.title}</div>
+              <div class="remediation-desc">{tip.description}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main App ─── */
+
 export function App() {
   const [report, setReport] = useState<WeeklyReport | null>(null);
+  const [settings, setSettings] = useState<DecoyShieldSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sectionIdx, setSectionIdx] = useState(0);
 
   useEffect(() => {
-    Promise.all([
-      chrome.runtime.sendMessage({ type: 'GET_WEEKLY_REPORT' }),
-      // Fallback: fetch stats directly if message handler isn't ready
-    ]).then(([data]) => {
-      if (data) {
-        setReport(data);
-      }
+    getSettings().then(setSettings);
+    return onSettingsChanged((s) => setSettings(s));
+  }, []);
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: 'GET_WEEKLY_REPORT' }).then((data: WeeklyReport | undefined) => {
+      if (data) setReport(data);
       setLoading(false);
     }).catch(() => {
-      // Fallback: fetch current and previous week stats separately
-      Promise.all([
-        chrome.runtime.sendMessage({ type: 'GET_STATS', range: 'week' }),
-        chrome.runtime.sendMessage({ type: 'GET_STATS', range: 'week' }),
-      ]).then(([current, previous]) => {
-        setReport({ current: current ?? emptyStats(), previous: previous ?? emptyStats() });
+      chrome.runtime.sendMessage({ type: 'GET_STATS', range: 'week' }).then((current: StatsData | undefined) => {
+        setReport({ current: current ?? emptyStats(), previous: emptyStats() });
         setLoading(false);
       });
     });
   }, []);
 
+  const goNext = useCallback(() => setSectionIdx((i) => Math.min(i + 1, SECTIONS.length - 1)), []);
+  const goPrev = useCallback(() => setSectionIdx((i) => Math.max(i - 1, 0)), []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goNext(); }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goPrev(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [goNext, goPrev]);
+
   if (loading) {
-    return (
-      <div class="report-container">
-        <div class="report-loading">Loading report...</div>
-      </div>
-    );
+    return <div class="report-container"><div class="report-loading">Loading report...</div></div>;
   }
 
-  if (!report) {
-    return (
-      <div class="report-container">
-        <div class="report-loading">No data available yet. Check back after browsing for a week.</div>
-      </div>
-    );
+  if (!report || !settings) {
+    return <div class="report-container"><div class="report-loading">No data available yet. Check back after browsing for a week.</div></div>;
   }
 
-  const remediations = generateRemediations(report);
-  const statKeys = Object.keys(STAT_LABELS) as Array<keyof DailyStats>;
-
+  const currentSection = SECTIONS[sectionIdx];
   const reportDate = new Date();
   const weekStart = new Date(reportDate);
   weekStart.setDate(weekStart.getDate() - 6);
 
   return (
     <div class="report-container">
+      {/* Header */}
       <div class="report-header">
         <div class="report-title-row">
           <span class="shield-icon">{'\u{1F6E1}\u{FE0F}'}</span>
@@ -254,32 +343,50 @@ export function App() {
         </div>
       </div>
 
-      <div class="stats-grid">
-        {statKeys.map((key) => (
-          <StatCard
-            key={key}
-            statKey={key}
-            current={report.current[key]}
-            previous={report.previous[key]}
+      {/* Section indicator dots */}
+      <div class="section-dots">
+        {SECTIONS.map((s, i) => (
+          <button
+            key={s}
+            class={`section-dot ${i === sectionIdx ? 'active' : ''}`}
+            onClick={() => setSectionIdx(i)}
+            title={s}
           />
         ))}
       </div>
 
-      <DailyBreakdown byDay={report.current.byDay} />
+      {/* Navigation + Section */}
+      <div class="section-nav">
+        <button
+          class="nav-arrow nav-left"
+          onClick={goPrev}
+          disabled={sectionIdx === 0}
+          aria-label="Previous section"
+        >
+          {'❮'}
+        </button>
 
-      <div class="section">
-        <h2>Recommendations</h2>
-        <div class="remediation-list">
-          {remediations.map((tip, i) => (
-            <div key={i} class={`remediation-card severity-${tip.severity}`}>
-              <div class="remediation-icon">{tip.icon}</div>
-              <div class="remediation-content">
-                <div class="remediation-title">{tip.title}</div>
-                <div class="remediation-desc">{tip.description}</div>
-              </div>
-            </div>
-          ))}
+        <div class="section-panel">
+          <h2 class="section-title">{currentSection}</h2>
+          {currentSection === 'Overview' && <OverviewSection report={report} />}
+          {currentSection === 'Daily Breakdown' && <DailyBreakdownSection byDay={report.current.byDay} />}
+          {currentSection === 'Protection Modules' && <ProtectionModulesSection settings={settings} />}
+          {currentSection === 'Recommendations' && <RecommendationsSection report={report} />}
         </div>
+
+        <button
+          class="nav-arrow nav-right"
+          onClick={goNext}
+          disabled={sectionIdx === SECTIONS.length - 1}
+          aria-label="Next section"
+        >
+          {'❯'}
+        </button>
+      </div>
+
+      {/* Section label */}
+      <div class="section-counter">
+        {sectionIdx + 1} / {SECTIONS.length}
       </div>
 
       <div class="report-footer">
@@ -291,12 +398,8 @@ export function App() {
 
 function emptyStats(): StatsData {
   return {
-    adsBlocked: 0,
-    trackersBlocked: 0,
-    fingerprintProtections: 0,
-    phishingWarnings: 0,
-    redirectsBlocked: 0,
-    cookiesDeleted: 0,
+    adsBlocked: 0, trackersBlocked: 0, fingerprintProtections: 0,
+    phishingWarnings: 0, redirectsBlocked: 0, cookiesDeleted: 0,
     byDay: {},
   };
 }
