@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'preact/hooks';
+import type { ComponentChild } from 'preact';
 import type { StatsData, DailyStats } from '@/shared/types';
+import {
+  BanIcon, EyeOffIcon, FingerprintIcon, AlertTriangleIcon,
+  CornerDownLeftIcon, CookieIcon, ShieldIcon, CheckCircleIcon,
+  TrendingUpIcon, LightbulbIcon, InfoIcon,
+} from '@/shared/Icons';
 import './styles/report.css';
 
 interface WeeklyReport {
@@ -8,19 +14,19 @@ interface WeeklyReport {
 }
 
 interface Remediation {
-  icon: string;
+  icon: ComponentChild;
   title: string;
   description: string;
   severity: 'info' | 'warning' | 'success';
 }
 
-const STAT_LABELS: Record<keyof DailyStats, { label: string; icon: string }> = {
-  adsBlocked: { label: 'Ads Blocked', icon: '\u{1F6AB}' },
-  trackersBlocked: { label: 'Trackers Blocked', icon: '\u{1F441}' },
-  fingerprintProtections: { label: 'Fingerprint Protections', icon: '\u{1F9EC}' },
-  phishingWarnings: { label: 'Phishing Warnings', icon: '\u{1F3A3}' },
-  redirectsBlocked: { label: 'Redirects Blocked', icon: '\u{21A9}' },
-  cookiesDeleted: { label: 'Cookies Deleted', icon: '\u{1F36A}' },
+const STAT_LABELS: Record<keyof DailyStats, { label: string; icon: ComponentChild }> = {
+  adsBlocked: { label: 'Ads Blocked', icon: <BanIcon size={22} color="#ff4757" /> },
+  trackersBlocked: { label: 'Trackers Blocked', icon: <EyeOffIcon size={22} color="#ffa502" /> },
+  fingerprintProtections: { label: 'Fingerprint Protections', icon: <FingerprintIcon size={22} color="#4f8cff" /> },
+  phishingWarnings: { label: 'Phishing Warnings', icon: <AlertTriangleIcon size={22} color="#ff6348" /> },
+  redirectsBlocked: { label: 'Redirects Blocked', icon: <CornerDownLeftIcon size={22} color="#636eff" /> },
+  cookiesDeleted: { label: 'Cookies Deleted', icon: <CookieIcon size={22} color="#ffa502" /> },
 };
 
 function getTrend(current: number, previous: number): { pct: number; direction: 'up' | 'down' | 'flat' } {
@@ -38,14 +44,14 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
   // Phishing warnings
   if (current.phishingWarnings > 0) {
     tips.push({
-      icon: '\u{26A0}\u{FE0F}',
+      icon: <AlertTriangleIcon size={20} color="#ff6348" />,
       title: `${current.phishingWarnings} phishing attempt${current.phishingWarnings > 1 ? 's' : ''} detected`,
       description: 'Avoid clicking links in emails from unknown senders. Always verify URLs before entering credentials. Look for HTTPS and check the domain carefully.',
       severity: 'warning',
     });
   } else {
     tips.push({
-      icon: '\u{2705}',
+      icon: <CheckCircleIcon size={20} color="#2ed573" />,
       title: 'No phishing attempts detected',
       description: 'Great browsing habits! Keep being cautious with unfamiliar links and emails.',
       severity: 'success',
@@ -56,14 +62,14 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
   const trackerTrend = getTrend(current.trackersBlocked, previous.trackersBlocked);
   if (trackerTrend.direction === 'up' && trackerTrend.pct > 30) {
     tips.push({
-      icon: '\u{1F4C8}',
+      icon: <TrendingUpIcon size={20} color="#ffa502" />,
       title: `Trackers up ${trackerTrend.pct}% vs last week`,
       description: 'You may be visiting more sites with aggressive tracking. Consider enabling cookie auto-delete if not already active, and review your browsing for new sites that load excessive trackers.',
       severity: 'warning',
     });
   } else if (current.trackersBlocked > 0) {
     tips.push({
-      icon: '\u{1F6E1}\u{FE0F}',
+      icon: <ShieldIcon size={20} color="#4f8cff" />,
       title: `${current.trackersBlocked} trackers blocked`,
       description: 'DecoyShield is actively protecting your privacy by blocking known tracking scripts and pixels.',
       severity: 'info',
@@ -73,14 +79,14 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
   // Ads blocked
   if (current.adsBlocked > 100) {
     tips.push({
-      icon: '\u{1F4A1}',
+      icon: <LightbulbIcon size={20} color="#ffa502" />,
       title: `${current.adsBlocked} ads blocked this week`,
       description: 'Heavy ad exposure detected. Consider checking if supplementary blocking rules are enabled in settings for broader coverage.',
       severity: 'info',
     });
   } else if (current.adsBlocked > 0) {
     tips.push({
-      icon: '\u{1F6AB}',
+      icon: <BanIcon size={20} color="#2ed573" />,
       title: `${current.adsBlocked} ads blocked`,
       description: 'Ad blocking is working normally. Pages should load faster and with fewer distractions.',
       severity: 'success',
@@ -90,14 +96,14 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
   // Fingerprint protections
   if (current.fingerprintProtections === 0) {
     tips.push({
-      icon: '\u{1F9EC}',
+      icon: <FingerprintIcon size={20} color="#ffa502" />,
       title: 'No fingerprint protections recorded',
       description: 'Fingerprint protection may be disabled. Enable it in DecoyShield settings to prevent sites from uniquely identifying your browser.',
       severity: 'warning',
     });
   } else {
     tips.push({
-      icon: '\u{1F9EC}',
+      icon: <FingerprintIcon size={20} color="#2ed573" />,
       title: `${current.fingerprintProtections} pages fingerprint-protected`,
       description: 'Your browser fingerprint is being randomized per-site, making cross-site tracking much harder.',
       severity: 'success',
@@ -109,7 +115,7 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
     const redirectTrend = getTrend(current.redirectsBlocked, previous.redirectsBlocked);
     const trendText = redirectTrend.direction === 'up' ? ` (${redirectTrend.pct}% increase)` : '';
     tips.push({
-      icon: '\u{21A9}\u{FE0F}',
+      icon: <CornerDownLeftIcon size={20} color="#636eff" />,
       title: `${current.redirectsBlocked} redirects blocked${trendText}`,
       description: 'Malicious redirects were intercepted before they could take you to unwanted sites.',
       severity: 'info',
@@ -119,7 +125,7 @@ function generateRemediations(report: WeeklyReport): Remediation[] {
   // Cookies deleted
   if (current.cookiesDeleted > 0) {
     tips.push({
-      icon: '\u{1F36A}',
+      icon: <CookieIcon size={20} color="#2ed573" />,
       title: `${current.cookiesDeleted} tracking cookies cleaned`,
       description: 'Tracking cookies from known advertising and analytics domains were automatically removed.',
       severity: 'success',
@@ -242,7 +248,7 @@ export function App() {
     <div class="report-container">
       <div class="report-header">
         <div class="report-title-row">
-          <span class="shield-icon">{'\u{1F6E1}\u{FE0F}'}</span>
+          <span class="shield-icon"><ShieldIcon size={32} color="#4f8cff" /></span>
           <div>
             <h1>Weekly Security Report</h1>
             <p class="report-date">

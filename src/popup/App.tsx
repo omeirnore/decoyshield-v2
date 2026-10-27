@@ -5,15 +5,22 @@ import { ProtectionStatus } from './components/ProtectionStatus';
 import { ModuleCard } from './components/ModuleCard';
 import { CookieCard } from './components/CookieCard';
 import { StatsBar } from './components/StatsBar';
+import {
+  FingerprintIcon, BanIcon, EyeOffIcon, AlertTriangleIcon,
+  ShieldIcon, CookieIcon, BarChartIcon,
+  CanvasIcon, GpuIcon, CompassIcon, MonitorIcon, AudioIcon, BoxSelectIcon,
+} from '@/shared/Icons';
 import './styles/popup.css';
 
-const FP_SUBTYPES: Array<{ key: keyof Omit<FingerprintSettings, 'enabled'>; label: string; icon: string }> = [
-  { key: 'canvas', label: 'Canvas', icon: '\u{1F3A8}' },
-  { key: 'webgl', label: 'WebGL', icon: '\u{1F4BB}' },
-  { key: 'navigator', label: 'Navigator', icon: '\u{1F9ED}' },
-  { key: 'screen', label: 'Screen', icon: '\u{1F5A5}' },
-  { key: 'audioContext', label: 'Audio', icon: '\u{1F50A}' },
-  { key: 'clientRects', label: 'ClientRects', icon: '\u{1F4D0}' },
+import type { ComponentChild } from 'preact';
+
+const FP_SUBTYPES: Array<{ key: keyof Omit<FingerprintSettings, 'enabled'>; label: string; icon: ComponentChild }> = [
+  { key: 'canvas', label: 'Canvas', icon: <CanvasIcon size={16} /> },
+  { key: 'webgl', label: 'WebGL', icon: <GpuIcon size={16} /> },
+  { key: 'navigator', label: 'Navigator', icon: <CompassIcon size={16} /> },
+  { key: 'screen', label: 'Screen', icon: <MonitorIcon size={16} /> },
+  { key: 'audioContext', label: 'Audio', icon: <AudioIcon size={16} /> },
+  { key: 'clientRects', label: 'ClientRects', icon: <BoxSelectIcon size={16} /> },
 ];
 
 const SECTIONS = ['Modules', 'Fingerprint Controls', 'Activity'] as const;
@@ -138,35 +145,35 @@ function ModulesSection({
       <div class="modules-grid">
         <ModuleCard
           title="Fingerprint Protection"
-          icon="&#x1F9EC;"
+          icon={<FingerprintIcon size={18} color="#4f8cff" />}
           enabled={settings.fingerprint.enabled}
           onToggle={() => toggle({ fingerprint: { enabled: !settings.fingerprint.enabled } })}
           stats={[{ label: 'protected', count: stats.fingerprints }]}
         />
         <ModuleCard
           title="Ad Blocking"
-          icon="&#x1F6AB;"
+          icon={<BanIcon size={18} color="#ff4757" />}
           enabled={settings.blocking.adsEnabled}
           onToggle={() => toggle({ blocking: { adsEnabled: !settings.blocking.adsEnabled } })}
           stats={[{ label: 'blocked', count: stats.ads }]}
         />
         <ModuleCard
           title="Tracker Blocking"
-          icon="&#x1F441;"
+          icon={<EyeOffIcon size={18} color="#ffa502" />}
           enabled={settings.blocking.trackersEnabled}
           onToggle={() => toggle({ blocking: { trackersEnabled: !settings.blocking.trackersEnabled } })}
           stats={[{ label: 'blocked', count: stats.trackers }]}
         />
         <ModuleCard
           title="Phishing Protection"
-          icon="&#x1F3A3;"
+          icon={<AlertTriangleIcon size={18} color="#ff6348" />}
           enabled={settings.phishing.enabled}
           onToggle={() => toggle({ phishing: { enabled: !settings.phishing.enabled } })}
           stats={[{ label: 'warnings', count: stats.phishing }]}
         />
         <ModuleCard
           title="Redirect Blocker"
-          icon="&#x1F6E1;"
+          icon={<ShieldIcon size={18} color="#7bed9f" />}
           enabled={settings.redirectBlock.enabled}
           onToggle={() => toggle({ redirectBlock: { enabled: !settings.redirectBlock.enabled } })}
           stats={[{ label: 'blocked', count: stats.redirects }]}
@@ -264,7 +271,7 @@ function ActivitySection({
         class="report-btn"
         onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('report/index.html') })}
       >
-        &#x1F4CA; Weekly Security Report
+        <span class="report-btn-icon"><BarChartIcon size={14} /></span> Weekly Security Report
       </button>
     </div>
   );

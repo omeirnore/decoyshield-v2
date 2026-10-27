@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { CookieIcon } from '@/shared/Icons';
 
 interface Props {
   enabled: boolean;
@@ -23,7 +24,7 @@ export function CookieCard({ enabled, onToggle, deletedCount }: Props) {
 
   return (
     <div class="module-card cookie-card">
-      <div class="module-icon">&#x1F36A;</div>
+      <div class="module-icon"><CookieIcon size={18} color="#ffa502" /></div>
       <div class="module-info">
         <div class="module-name">Cookie Manager</div>
         <div class="module-stats">

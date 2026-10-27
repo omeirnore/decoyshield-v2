@@ -1,4 +1,5 @@
 import type { DecoyShieldSettings } from '@/shared/types';
+import { ShieldIcon } from '@/shared/Icons';
 
 interface Props {
   settings: DecoyShieldSettings;
@@ -23,7 +24,7 @@ export function ProtectionStatus({ settings, onToggle }: Props) {
   const state = getShieldState(settings);
   return (
     <div class="protection-status">
-      <div class="shield-icon" style={{ color: SHIELD_COLORS[state] }}>&#x1F6E1;</div>
+      <div class="shield-icon" style={{ color: SHIELD_COLORS[state] }}><ShieldIcon size={28} /></div>
       <div class="protection-info">
         <div class="protection-title">DecoyShield</div>
         <div class="protection-subtitle">{SHIELD_LABELS[state]}</div>

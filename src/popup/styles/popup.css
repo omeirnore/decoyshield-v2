@@ -610,3 +610,9 @@ body {
 .report-btn:hover {
   background: var(--ds-bg-hover);
 }
+
+.report-btn-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 4px;
+}

@@ -7,7 +7,7 @@ interface StatEntry {
 
 interface Props {
   title: string;
-  icon: string;
+  icon: ComponentChildren;
   enabled: boolean;
   onToggle: () => void;
   stats: StatEntry[];
