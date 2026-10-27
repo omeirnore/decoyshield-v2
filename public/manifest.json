@@ -11,7 +11,9 @@
     "declarativeNetRequestFeedback",
     "webNavigation",
     "cookies",
-    "tabs"
+    "tabs",
+    "alarms",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>"

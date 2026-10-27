@@ -9,7 +9,9 @@ import { registerCookieHandler, cleanTrackingCookies, deepCleanCookies } from '.
 import { enableRuleset, disableRuleset, checkRuleCapacity } from './dnr-manager';
 import { recordStat, getStats } from './stats-collector';
 import { pushLogEntry, getBlockLog } from './block-log';
-import type { StatType } from '@/shared/types';
+import type { StatType, StatsData, DailyStats } from '@/shared/types';
+
+const WEEKLY_ALARM = 'decoyshield-weekly-report';
 
 async function initSessionSalt(): Promise<void> {
   await chrome.storage.session.setAccessLevel({
@@ -45,10 +47,52 @@ async function syncBlockingState(): Promise<void> {
   }
 }
 
+async function registerWeeklyAlarm(): Promise<void> {
+  const existing = await chrome.alarms.get(WEEKLY_ALARM);
+  if (!existing) {
+    // Fire once a week (10080 minutes). First fire in 7 days from install.
+    chrome.alarms.create(WEEKLY_ALARM, {
+      delayInMinutes: 7 * 24 * 60,
+      periodInMinutes: 7 * 24 * 60,
+    });
+  }
+}
+
+async function getPreviousWeekStats(): Promise<StatsData> {
+  // Build a "previous week" stats object by fetching 14 days and slicing days 8-14
+  const now = new Date();
+  const EMPTY: DailyStats = {
+    adsBlocked: 0, trackersBlocked: 0, fingerprintProtections: 0,
+    phishingWarnings: 0, redirectsBlocked: 0, cookiesDeleted: 0,
+  };
+  const keys: string[] = [];
+  for (let i = 7; i < 14; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    keys.push(`${y}-${m}-${day}`);
+  }
+  const storageKeys = keys.map((k) => `stats-${k}`);
+  const data = await chrome.storage.local.get(storageKeys);
+  const totals: DailyStats = { ...EMPTY };
+  const byDay: Record<string, DailyStats> = {};
+  for (const date of keys) {
+    const daily: DailyStats = data[`stats-${date}`] ?? { ...EMPTY };
+    byDay[date] = daily;
+    for (const k of Object.keys(EMPTY) as Array<keyof DailyStats>) {
+      totals[k] += daily[k];
+    }
+  }
+  return { ...totals, byDay };
+}
+
 async function onStartup(): Promise<void> {
   await initSessionSalt();
   await syncFingerprintState();
   await syncBlockingState();
+  await registerWeeklyAlarm();
   const capacity = await checkRuleCapacity();
   if (capacity.warning) {
     console.warn(`DecoyShield: Low DNR rule capacity (${capacity.available} remaining)`);
@@ -64,6 +108,26 @@ registerPhishingHandler();
 registerRedirectHandler();
 registerCookieHandler();
 
+// --- Weekly report alarm & notification ---
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === WEEKLY_ALARM) {
+    chrome.notifications.create('decoyshield-weekly-report', {
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+      title: 'DecoyShield Weekly Report',
+      message: 'Your weekly security report is ready. Click to view your browsing protection summary.',
+      priority: 2,
+    });
+  }
+});
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  if (notificationId === 'decoyshield-weekly-report') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('report/index.html') });
+    chrome.notifications.clear(notificationId);
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === 'ALLOW_URL' && typeof message.payload === 'string') {
     allowUrl(message.payload);
@@ -74,6 +138,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
   if (message?.type === 'RECORD_STAT' && message.statType) {
     recordStat({ type: message.statType, timestamp: Date.now() });
+  }
+  if (message?.type === 'GET_WEEKLY_REPORT') {
+    Promise.all([getStats('week'), getPreviousWeekStats()]).then(([current, previous]) => {
+      sendResponse({ current, previous });
+    });
+    return true;
   }
   if (message?.type === 'GET_BLOCK_LOG') {
     sendResponse(getBlockLog());

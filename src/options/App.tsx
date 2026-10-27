@@ -9,7 +9,7 @@ import { StatisticsPage } from './pages/StatisticsPage';
 import { ThreatLog } from './pages/ThreatLog';
 import './styles/options.css';
 
-const TABS = ['Fingerprint', 'Blocking', 'Phishing', 'Cookies', 'Statistics', 'Threat Log'] as const;
+const TABS = ['Fingerprint', 'Blocking', 'Phishing', 'Cookies', 'Statistics', 'Threat Log', 'Weekly Report'] as const;
 type Tab = typeof TABS[number];
 
 function getInitialTab(): Tab {
@@ -54,6 +54,24 @@ export function App() {
       {tab === 'Cookies' && <CookieManager />}
       {tab === 'Statistics' && <StatisticsPage />}
       {tab === 'Threat Log' && <ThreatLog />}
+      {tab === 'Weekly Report' && (
+        <div class="section" style={{ textAlign: 'center', padding: '40px 20px' }}>
+          <p style={{ fontSize: '48px', marginBottom: '16px' }}>{'\u{1F6E1}\u{FE0F}'}</p>
+          <h2 style={{ marginBottom: '8px' }}>Weekly Security Report</h2>
+          <p class="info-text" style={{ marginBottom: '20px' }}>
+            View your weekly browsing protection summary with trends and personalised security recommendations.
+          </p>
+          <button
+            class="btn btn-primary"
+            onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('report/index.html') })}
+          >
+            Open Weekly Report
+          </button>
+          <p class="info-text" style={{ marginTop: '16px' }}>
+            You'll also receive a notification each week when a new report is ready.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
