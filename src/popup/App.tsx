@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import type { DecoyShieldSettings, StatsData, FingerprintSettings } from '@/shared/types';
 import { getSettings, updateSettings, onSettingsChanged } from '@/shared/storage';
 import { ProtectionStatus } from './components/ProtectionStatus';
@@ -7,14 +7,16 @@ import { CookieCard } from './components/CookieCard';
 import { StatsBar } from './components/StatsBar';
 import './styles/popup.css';
 
-const FP_SUBTYPES: Array<{ key: keyof Omit<FingerprintSettings, 'enabled'>; label: string }> = [
-  { key: 'canvas', label: 'Canvas' },
-  { key: 'webgl', label: 'WebGL' },
-  { key: 'navigator', label: 'Navigator' },
-  { key: 'screen', label: 'Screen' },
-  { key: 'audioContext', label: 'Audio' },
-  { key: 'clientRects', label: 'ClientRects' },
+const FP_SUBTYPES: Array<{ key: keyof Omit<FingerprintSettings, 'enabled'>; label: string; icon: string }> = [
+  { key: 'canvas', label: 'Canvas', icon: '\u{1F3A8}' },
+  { key: 'webgl', label: 'WebGL', icon: '\u{1F4BB}' },
+  { key: 'navigator', label: 'Navigator', icon: '\u{1F9ED}' },
+  { key: 'screen', label: 'Screen', icon: '\u{1F5A5}' },
+  { key: 'audioContext', label: 'Audio', icon: '\u{1F50A}' },
+  { key: 'clientRects', label: 'ClientRects', icon: '\u{1F4D0}' },
 ];
+
+const SECTIONS = ['Modules', 'Fingerprint Controls', 'Activity'] as const;
 
 interface BlockLogEntry {
   domain: string;
@@ -55,7 +57,7 @@ function useBlockLog() {
   useEffect(() => {
     function fetchLog() {
       chrome.runtime.sendMessage({ type: 'GET_BLOCK_LOG' }, (resp: BlockLogEntry[] | undefined) => {
-        if (resp) setLog([...resp].reverse()); // newest first
+        if (resp) setLog([...resp].reverse());
       });
     }
     fetchLog();
@@ -121,28 +123,18 @@ function ActivityLog({ log }: { log: BlockLogEntry[] }) {
   );
 }
 
-export function App() {
-  const [settings, setSettings] = useState<DecoyShieldSettings | null>(null);
-  const stats = useLiveStats();
-  const blockLog = useBlockLog();
-
-  useEffect(() => {
-    getSettings().then(setSettings);
-    return onSettingsChanged((s) => setSettings(s));
-  }, []);
-
-  if (!settings) return null;
-
-  const [fpExpanded, setFpExpanded] = useState(false);
-  const toggle = (path: Record<string, unknown>) => updateSettings(path);
-
+/* ─── Section: Modules ─── */
+function ModulesSection({
+  settings,
+  stats,
+  toggle,
+}: {
+  settings: DecoyShieldSettings;
+  stats: ReturnType<typeof useLiveStats>;
+  toggle: (path: Record<string, unknown>) => void;
+}) {
   return (
-    <div class="popup-container">
-      <ProtectionStatus
-        settings={settings}
-        onToggle={() => toggle({ masterEnabled: !settings.masterEnabled })}
-      />
-
+    <div class="section-content">
       <div class="modules-grid">
         <ModuleCard
           title="Fingerprint Protection"
@@ -150,23 +142,7 @@ export function App() {
           enabled={settings.fingerprint.enabled}
           onToggle={() => toggle({ fingerprint: { enabled: !settings.fingerprint.enabled } })}
           stats={[{ label: 'protected', count: stats.fingerprints }]}
-        >
-          <div class="fp-expand-toggle" onClick={() => setFpExpanded(!fpExpanded)}>
-            <span>{fpExpanded ? '▲' : '▼'} Protection types</span>
-          </div>
-          {fpExpanded && (
-            <div class="fp-subtypes">
-              {FP_SUBTYPES.map(({ key, label }) => (
-                <div class="fp-subtype-row" key={key}>
-                  <span class="fp-subtype-label">{label}</span>
-                  <span class={`fp-subtype-badge ${settings.fingerprint[key] ? 'active' : 'off'}`}>
-                    {settings.fingerprint[key] ? 'ON' : 'OFF'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </ModuleCard>
+        />
         <ModuleCard
           title="Ad Blocking"
           icon="&#x1F6AB;"
@@ -201,25 +177,180 @@ export function App() {
           deletedCount={stats.cookies}
         />
       </div>
+    </div>
+  );
+}
 
+/* ─── Section: Fingerprint Controls ─── */
+function FingerprintSection({
+  settings,
+  toggle,
+}: {
+  settings: DecoyShieldSettings;
+  toggle: (path: Record<string, unknown>) => void;
+}) {
+  const allOn = FP_SUBTYPES.every(({ key }) => settings.fingerprint[key]);
+  const allOff = FP_SUBTYPES.every(({ key }) => !settings.fingerprint[key]);
+
+  const toggleAll = () => {
+    const newVal = !allOn;
+    const updates: Record<string, boolean> = {};
+    FP_SUBTYPES.forEach(({ key }) => { updates[key] = newVal; });
+    toggle({ fingerprint: updates });
+  };
+
+  return (
+    <div class="section-content">
+      <div class="fp-section-header">
+        <span class="fp-section-desc">Toggle individual spoofing types</span>
+        <button class="fp-toggle-all-btn" onClick={toggleAll}>
+          {allOn ? 'Disable All' : 'Enable All'}
+        </button>
+      </div>
+      <div class="fp-controls-list">
+        {FP_SUBTYPES.map(({ key, label, icon }) => (
+          <div class="fp-control-row" key={key}>
+            <span class="fp-control-icon">{icon}</span>
+            <div class="fp-control-info">
+              <span class="fp-control-label">{label}</span>
+              <span class="fp-control-hint">
+                {key === 'canvas' && 'Randomize canvas draw output'}
+                {key === 'webgl' && 'Spoof GPU renderer & vendor'}
+                {key === 'navigator' && 'Mask hardware & platform info'}
+                {key === 'screen' && 'Randomize screen dimensions'}
+                {key === 'audioContext' && 'Add noise to audio fingerprint'}
+                {key === 'clientRects' && 'Offset element bounding rects'}
+              </span>
+            </div>
+            <label class="toggle-switch">
+              <input
+                type="checkbox"
+                checked={settings.fingerprint[key]}
+                onChange={() => toggle({ fingerprint: { [key]: !settings.fingerprint[key] } })}
+              />
+              <span class="toggle-slider" />
+            </label>
+          </div>
+        ))}
+      </div>
+      {!settings.fingerprint.enabled && (
+        <div class="fp-disabled-notice">
+          Fingerprint Protection is off. Enable it on the Modules page first.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Section: Activity ─── */
+function ActivitySection({
+  stats,
+  blockLog,
+}: {
+  stats: ReturnType<typeof useLiveStats>;
+  blockLog: BlockLogEntry[];
+}) {
+  return (
+    <div class="section-content">
       <StatsBar
         blocked={stats.ads + stats.trackers}
         fingerprints={stats.fingerprints}
         phishing={stats.phishing}
       />
-
+      <div style={{ height: 10 }} />
       <ActivityLog log={blockLog} />
-
+      <div style={{ height: 10 }} />
       <button
         class="report-btn"
         onClick={() => chrome.tabs.create({ url: chrome.runtime.getURL('report/index.html') })}
       >
         &#x1F4CA; Weekly Security Report
       </button>
+    </div>
+  );
+}
 
-      <a class="settings-link" onClick={() => chrome.runtime.openOptionsPage()}>
-        Open Settings
-      </a>
+/* ─── Main App ─── */
+export function App() {
+  const [settings, setSettings] = useState<DecoyShieldSettings | null>(null);
+  const [sectionIdx, setSectionIdx] = useState(0);
+  const stats = useLiveStats();
+  const blockLog = useBlockLog();
+
+  useEffect(() => {
+    getSettings().then(setSettings);
+    return onSettingsChanged((s) => setSettings(s));
+  }, []);
+
+  const goNext = useCallback(() => setSectionIdx((i) => Math.min(i + 1, SECTIONS.length - 1)), []);
+  const goPrev = useCallback(() => setSectionIdx((i) => Math.max(i - 1, 0)), []);
+
+  if (!settings) return null;
+
+  const toggle = (path: Record<string, unknown>) => updateSettings(path);
+  const currentSection = SECTIONS[sectionIdx];
+
+  return (
+    <div class="popup-container">
+      {/* Header — always visible */}
+      <ProtectionStatus
+        settings={settings}
+        onToggle={() => toggle({ masterEnabled: !settings.masterEnabled })}
+      />
+
+      {/* Section dots */}
+      <div class="section-dots">
+        {SECTIONS.map((s, i) => (
+          <button
+            key={s}
+            class={`section-dot ${i === sectionIdx ? 'active' : ''}`}
+            onClick={() => setSectionIdx(i)}
+            title={s}
+          />
+        ))}
+      </div>
+
+      {/* Navigation + Content */}
+      <div class="section-nav">
+        <button
+          class="nav-arrow"
+          onClick={goPrev}
+          disabled={sectionIdx === 0}
+          aria-label="Previous section"
+        >
+          {'❮'}
+        </button>
+
+        <div class="section-panel">
+          <div class="section-title">{currentSection}</div>
+          {currentSection === 'Modules' && (
+            <ModulesSection settings={settings} stats={stats} toggle={toggle} />
+          )}
+          {currentSection === 'Fingerprint Controls' && (
+            <FingerprintSection settings={settings} toggle={toggle} />
+          )}
+          {currentSection === 'Activity' && (
+            <ActivitySection stats={stats} blockLog={blockLog} />
+          )}
+        </div>
+
+        <button
+          class="nav-arrow"
+          onClick={goNext}
+          disabled={sectionIdx === SECTIONS.length - 1}
+          aria-label="Next section"
+        >
+          {'❯'}
+        </button>
+      </div>
+
+      {/* Section counter + Settings */}
+      <div class="section-footer">
+        <span class="section-counter">{sectionIdx + 1} / {SECTIONS.length}</span>
+        <a class="settings-link" onClick={() => chrome.runtime.openOptionsPage()}>
+          Settings
+        </a>
+      </div>
     </div>
   );
 }
