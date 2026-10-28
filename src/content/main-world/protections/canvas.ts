@@ -67,4 +67,49 @@ export function apply(
     ctx.putImageData(img, 0, 0);
     originalToBlob.call(temp, callback, type, quality);
   };
+
+  // ─── OffscreenCanvas support ─────────────────────────────────
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const originalOCConvertToBlob = OffscreenCanvas.prototype.convertToBlob;
+    OffscreenCanvas.prototype.convertToBlob = function (
+      this: OffscreenCanvas,
+      options?: ImageEncodeOptions,
+    ) {
+      if (!isEnabled()) return originalOCConvertToBlob.call(this, options);
+      const ctx = this.getContext('2d') as OffscreenCanvasRenderingContext2D | null;
+      if (!ctx) return originalOCConvertToBlob.call(this, options);
+      const img = ctx.getImageData(0, 0, this.width, this.height);
+      applyNoise(img.data, getProfile().canvas.noiseSeed);
+      ctx.putImageData(img, 0, 0);
+      return originalOCConvertToBlob.call(this, options);
+    };
+  }
+
+  // ─── WebGL readPixels ────────────────────────────────────────
+  const patchReadPixels = (proto: WebGLRenderingContext | WebGL2RenderingContext) => {
+    const original = proto.readPixels;
+    // @ts-expect-error — overload signatures
+    proto.readPixels = function (
+      this: WebGLRenderingContext,
+      ...args: unknown[]
+    ) {
+      // @ts-expect-error — spread into overloaded fn
+      original.apply(this, args);
+      if (!isEnabled()) return;
+      // The pixel buffer is the last ArrayBufferView argument
+      for (let i = args.length - 1; i >= 0; i--) {
+        if (args[i] instanceof Uint8Array || args[i] instanceof Uint8ClampedArray) {
+          applyNoise(args[i] as Uint8ClampedArray, getProfile().canvas.noiseSeed);
+          break;
+        }
+      }
+    };
+  };
+
+  if (typeof WebGLRenderingContext !== 'undefined') {
+    patchReadPixels(WebGLRenderingContext.prototype as unknown as WebGLRenderingContext);
+  }
+  if (typeof WebGL2RenderingContext !== 'undefined') {
+    patchReadPixels(WebGL2RenderingContext.prototype as unknown as WebGL2RenderingContext);
+  }
 }

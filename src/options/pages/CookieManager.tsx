@@ -105,9 +105,13 @@ export function CookieManager() {
             onKeyDown={(e) => e.key === 'Enter' && loadCookies()} />
           <button class="btn btn-primary" onClick={loadCookies}>Load</button>
           <button class="btn btn-outline" onClick={() => {
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
               if (tabs[0]?.url) {
-                try { setDomain(new URL(tabs[0].url).hostname); } catch { /* ignore */ }
+                try {
+                  const host = new URL(tabs[0].url).hostname;
+                  setDomain(host);
+                  setCookies(await getCookiesForDomain(host));
+                } catch { /* ignore */ }
               }
             });
           }}>Current Tab</button>
