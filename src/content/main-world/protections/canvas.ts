@@ -1,12 +1,36 @@
 import type { FingerprintProfile } from '@/shared/types';
 
+/**
+ * Farble pixel data — Brave-style approach:
+ * Modify R/G/B channels of ~25% of pixels by ±1..3 LSBs.
+ * Deterministic per seed (same page load = same hash).
+ */
 function applyNoise(data: Uint8ClampedArray, seed: number): void {
-  let s = seed;
-  for (let i = 0; i < data.length; i += 40) {
+  let s = seed >>> 0 || 1;
+  const len = data.length;
+  // Step through every pixel (4 bytes: R,G,B,A) — skip alpha
+  for (let i = 0; i < len; i += 4) {
+    // xorshift32 PRNG
     s ^= s << 13;
     s ^= s >> 17;
     s ^= s << 5;
-    data[i] = data[i] ^ ((s >>> 0) & 1);
+    const r = s >>> 0;
+    // Modify ~50% of pixels (bit 0 of random)
+    if (r & 1) {
+      // Modify R channel: ±1 to ±3
+      const delta = ((r >> 1) & 3) + 1;          // 1..4
+      data[i] = (r & 16) ? Math.min(255, data[i] + delta) : Math.max(0, data[i] - delta);
+    }
+    if (r & 2) {
+      // Modify G channel
+      const delta = ((r >> 5) & 3) + 1;
+      data[i + 1] = (r & 32) ? Math.min(255, data[i + 1] + delta) : Math.max(0, data[i + 1] - delta);
+    }
+    if (r & 4) {
+      // Modify B channel
+      const delta = ((r >> 9) & 3) + 1;
+      data[i + 2] = (r & 64) ? Math.min(255, data[i + 2] + delta) : Math.max(0, data[i + 2] - delta);
+    }
   }
 }
 
@@ -112,4 +136,72 @@ export function apply(
   if (typeof WebGL2RenderingContext !== 'undefined') {
     patchReadPixels(WebGL2RenderingContext.prototype as unknown as WebGL2RenderingContext);
   }
+
+  // ─── measureText farbling ───────────────────────────────────
+  const originalMeasureText = CanvasRenderingContext2D.prototype.measureText;
+  CanvasRenderingContext2D.prototype.measureText = function (
+    this: CanvasRenderingContext2D,
+    text: string,
+  ) {
+    const metrics = originalMeasureText.call(this, text);
+    if (!isEnabled()) return metrics;
+
+    let s = getProfile().canvas.noiseSeed ^ text.length;
+    const fuzz = () => {
+      s ^= s << 13;
+      s ^= s >> 17;
+      s ^= s << 5;
+      // Tiny offset: ±0.001 to ±0.1
+      return ((s >>> 0) % 200 - 100) / 1000;
+    };
+
+    const w = metrics.width + fuzz();
+    const desc: PropertyDescriptorMap = {
+      width: { value: w, configurable: true },
+    };
+    // Farble all metric properties if they exist
+    const props = [
+      'actualBoundingBoxLeft', 'actualBoundingBoxRight',
+      'actualBoundingBoxAscent', 'actualBoundingBoxDescent',
+      'fontBoundingBoxAscent', 'fontBoundingBoxDescent',
+      'alphabeticBaseline', 'emHeightAscent', 'emHeightDescent',
+    ] as const;
+    for (const p of props) {
+      const val = (metrics as Record<string, number>)[p];
+      if (typeof val === 'number') {
+        desc[p] = { value: val + fuzz(), configurable: true };
+      }
+    }
+    Object.defineProperties(metrics, desc);
+    return metrics;
+  };
+
+  // ─── isPointInPath / isPointInStroke farbling ───────────────
+  const originalIsPointInPath = CanvasRenderingContext2D.prototype.isPointInPath;
+  const originalIsPointInStroke = CanvasRenderingContext2D.prototype.isPointInStroke;
+
+  CanvasRenderingContext2D.prototype.isPointInPath = function (
+    this: CanvasRenderingContext2D,
+    ...args: unknown[]
+  ) {
+    // @ts-expect-error — overload signatures
+    const result = originalIsPointInPath.apply(this, args) as boolean;
+    if (!isEnabled()) return result;
+    // ~5% chance of flipping result (Brave-style)
+    let s = getProfile().canvas.noiseSeed ^ 0x50494e50;
+    s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+    return ((s >>> 0) % 20 === 0) ? !result : result;
+  };
+
+  CanvasRenderingContext2D.prototype.isPointInStroke = function (
+    this: CanvasRenderingContext2D,
+    ...args: unknown[]
+  ) {
+    // @ts-expect-error — overload signatures
+    const result = originalIsPointInStroke.apply(this, args) as boolean;
+    if (!isEnabled()) return result;
+    let s = getProfile().canvas.noiseSeed ^ 0x53545250;
+    s ^= s << 13; s ^= s >> 17; s ^= s << 5;
+    return ((s >>> 0) % 20 === 0) ? !result : result;
+  };
 }
